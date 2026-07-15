@@ -1,0 +1,215 @@
+/* Big Sky Command™ — Experience Engine
+   Reusable stylesheet. No client-specific colors, copy, or imagery live
+   here — --exp-primary / --exp-secondary are set at runtime by app.js
+   from the loaded Supabase record. Defaults below only apply before a
+   record loads, or if a record leaves a color blank. */
+
+:root {
+  --exp-primary: #1b2a41;
+  --exp-secondary: #d4af37;
+  --exp-text: #1a1a1a;
+  --exp-muted: #5c6570;
+  --exp-bg: #ffffff;
+  --exp-surface: #f6f7f9;
+  --exp-border: #e3e6ea;
+  --exp-radius: 14px;
+  --exp-max-width: 560px;
+  --exp-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--exp-bg);
+  color: var(--exp-text);
+  font-family: var(--exp-font);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+img, video { max-width: 100%; display: block; }
+
+button { font-family: inherit; }
+
+:focus-visible {
+  outline: 3px solid var(--exp-secondary);
+  outline-offset: 2px;
+}
+
+/* ---------------- Loading / fallback states ---------------- */
+
+.state-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 24px;
+  gap: 16px;
+}
+
+.state-screen h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.state-screen p {
+  margin: 0;
+  max-width: 40ch;
+  color: var(--exp-muted);
+  line-height: 1.5;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--exp-border);
+  border-top-color: var(--exp-primary);
+  animation: exp-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 1.6s; }
+}
+
+@keyframes exp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------------- Experience layout ---------------- */
+
+.experience {
+  flex: 1;
+  width: 100%;
+  max-width: var(--exp-max-width);
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.exp-header {
+  display: flex;
+  justify-content: center;
+}
+
+.exp-logo {
+  max-height: 64px;
+  width: auto;
+}
+
+.exp-hero {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.exp-headline {
+  margin: 0;
+  font-size: clamp(1.5rem, 5vw, 2.1rem);
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--exp-primary);
+}
+
+.exp-subheadline {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--exp-muted);
+}
+
+.exp-video-section {
+  border-radius: var(--exp-radius);
+  overflow: hidden;
+  background: #000;
+}
+
+.exp-video {
+  width: 100%;
+  border-radius: var(--exp-radius);
+}
+
+.exp-cta-section {
+  display: flex;
+  justify-content: center;
+}
+
+.exp-cta-button {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 16px 24px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--exp-primary);
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.exp-cta-button:hover { opacity: 0.92; }
+.exp-cta-button:active { transform: scale(0.98); }
+
+.exp-form-section {
+  background: var(--exp-surface);
+  border: 1px solid var(--exp-border);
+  border-radius: var(--exp-radius);
+  padding: 16px;
+}
+
+.exp-form-embed {
+  width: 100%;
+}
+
+/* GHL embeds often inject their own iframe; make sure it never overflows */
+.exp-form-embed iframe {
+  width: 100% !important;
+  border: none;
+}
+
+.exp-thankyou-section {
+  text-align: center;
+  padding: 14px 16px;
+  border-radius: var(--exp-radius);
+  background: color-mix(in srgb, var(--exp-secondary) 12%, white);
+}
+
+.exp-thankyou {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--exp-muted);
+  line-height: 1.5;
+}
+
+.exp-footer {
+  text-align: center;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.exp-footer p {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--exp-muted);
+  opacity: 0.7;
+}
+
+/* ---------------- Small phones ---------------- */
+
+@media (max-width: 360px) {
+  .experience { padding: 20px 16px 32px; gap: 22px; }
+}

@@ -1,0 +1,4 @@
+# Big Sky Command™ — Experience Engine
+# Netlify redirect rule: routes any /e/{Experience ID} path to index.html
+# so app.js can read the ID from the URL. Only used if deploying to Netlify.
+/e/*  /index.html  200

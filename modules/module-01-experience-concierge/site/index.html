@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Big Sky Command™ — Experience</title>
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ===================================================================
+       This page is one reusable Experience Engine template. It contains
+       NO client-specific content. Every piece of text, color, image, and
+       embed you see rendered on screen is loaded at runtime from the
+       Supabase "experiences" record matching the Experience ID in the
+       URL (e.g. /e/BS000001). Do not hardcode business content here —
+       add or edit it in Supabase instead.
+       =================================================================== -->
+
+  <!-- Loading state: shown immediately, hidden once a record loads or fails -->
+  <div id="state-loading" class="state-screen" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p>Loading your experience…</p>
+  </div>
+
+  <!-- Fallback state: shown if the Experience ID is missing, unknown, or inactive -->
+  <div id="state-notfound" class="state-screen" hidden>
+    <h1>We couldn't find that experience</h1>
+    <p>
+      This link may be out of date, or the experience it points to isn't
+      active right now. Please check the link and try again, or contact
+      the business that shared it with you.
+    </p>
+  </div>
+
+  <!-- Experience template: populated entirely from the database record -->
+  <main id="experience" class="experience" hidden>
+
+    <header class="exp-header">
+      <img id="exp-logo" class="exp-logo" src="" alt="" hidden />
+    </header>
+
+    <section class="exp-hero">
+      <h1 id="exp-headline" class="exp-headline"></h1>
+      <p id="exp-subheadline" class="exp-subheadline"></p>
+    </section>
+
+    <section id="exp-video-section" class="exp-video-section" hidden>
+      <video id="exp-video" class="exp-video" controls playsinline preload="metadata"></video>
+    </section>
+
+    <section class="exp-cta-section">
+      <button id="exp-cta" type="button" class="exp-cta-button"></button>
+    </section>
+
+    <section id="exp-form-section" class="exp-form-section" hidden>
+      <div id="exp-form-embed" class="exp-form-embed"></div>
+    </section>
+
+    <section id="exp-thankyou-section" class="exp-thankyou-section" hidden>
+      <p id="exp-thankyou" class="exp-thankyou"></p>
+    </section>
+
+    <footer class="exp-footer">
+      <p>Powered by Big Sky Command™</p>
+    </footer>
+
+  </main>
+
+  <!-- Supabase client (CDN build) — loaded and ready for when DATA_PROVIDER
+       is switched back to "supabase" in config.js; unused while the data
+       provider is set to "json". -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- Project connection details (data provider choice + URL/key). -->
+  <script src="config.js"></script>
+  <!-- The only file that knows where experience records come from. -->
+  <script src="data-provider.js"></script>
+  <!-- Experience Engine logic -->
+  <script src="app.js"></script>
+
+</body>
+</html>

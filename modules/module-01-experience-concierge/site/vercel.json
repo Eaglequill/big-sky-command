@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/e/:experienceId", "destination": "/index.html" }
+  ]
+}

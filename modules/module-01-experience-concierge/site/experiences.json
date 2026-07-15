@@ -1,0 +1,19 @@
+[
+  {
+    "experience_id": "BS000001",
+    "business_name": "Big Sky Lead Partners",
+    "experience_name": "Big Sky Lead Partners Demo Experience",
+    "status": "active",
+    "headline": "Welcome to Your Big Sky Experience",
+    "subheadline": "Discover how Big Sky Command turns customer interest into a guided, connected business experience.",
+    "logo_url": "PLACEHOLDER — logo_url (transparent PNG, hosted, min 500px wide)",
+    "primary_color": "PLACEHOLDER — primary_color (hex code, e.g. #1B2A41)",
+    "secondary_color": "PLACEHOLDER — secondary_color (hex code, e.g. #D4AF37)",
+    "welcome_video_url": "PLACEHOLDER — welcome_video_url (hosted video link, e.g. GHL Media Storage or unlisted link)",
+    "call_to_action_text": "Start Your Experience",
+    "ghl_form_embed": "<!-- PLACEHOLDER — ghl_form_embed: paste the GHL form embed code/snippet here -->",
+    "thank_you_message": "Thanks for connecting with Big Sky Lead Partners. We received your information and will follow up personally.",
+    "created_at": "2026-07-13T00:00:00Z",
+    "updated_at": "2026-07-13T00:00:00Z"
+  }
+]
