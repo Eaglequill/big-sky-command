@@ -19,11 +19,11 @@
 
   /* Engine-owned constants, all derived from the two above so the whole
      page stays tonally coherent no matter what color a client picks. */
-  --exp-sky: color-mix(in srgb, var(--exp-primary) 42%, white);
-  --exp-night: color-mix(in srgb, var(--exp-primary) 55%, black);   /* cool, up high — no sun reaches it */
-  --exp-horizon-warm: color-mix(in srgb, var(--exp-secondary) 22%, var(--exp-primary)); /* the sun, just out of frame */
-  --exp-mid: color-mix(in srgb, var(--exp-primary) 85%, black);
-  --exp-deep: color-mix(in srgb, var(--exp-primary) 96%, black);
+  --exp-sky: color-mix(in oklch, var(--exp-primary) 42%, white);
+  --exp-night: color-mix(in oklch, var(--exp-primary) 55%, black);   /* cool, up high — no sun reaches it */
+  --exp-horizon-warm: color-mix(in oklch, var(--exp-secondary) 22%, var(--exp-primary)); /* the sun, just out of frame */
+  --exp-mid: color-mix(in oklch, var(--exp-primary) 85%, black);
+  --exp-deep: color-mix(in oklch, var(--exp-primary) 96%, black);
   --exp-ink: rgba(255, 255, 255, 0.94);
   --exp-ink-muted: rgba(255, 255, 255, 0.6);
   --exp-glass: rgba(255, 255, 255, 0.05);
@@ -172,6 +172,25 @@ p { margin: 0; }
 
 /* ---------------- 1. Hero ---------------- */
 
+/* ---------------- Opening Sequence (reserved) ---------------- */
+/* Full-viewport, plays before the hero if an intro file has been
+   installed (see index.html comment). Hidden by default; app.js reveals
+   it only once the video actually has data to show, so a missing file
+   never causes a flash of black or a broken player icon. */
+
+.exp-intro-sequence {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+  cursor: pointer;
+}
+
+/* ---------------- 1. Hero — where the visitor arrives ---------------- */
+
 .exp-hero {
   position: relative;
   min-height: 100vh;
@@ -179,15 +198,14 @@ p { margin: 0; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   overflow: hidden;
   isolation: isolate;
 }
 
-/* The actual light source. Cool and dark up high where no sun reaches;
-   warmth pools at the horizon, as if the sun set moments ago just out of
-   frame. This one gradient is what makes the scene a place and a time,
-   not just a colored background. */
+/* The atmosphere: cool and dark up high, warmth pooling at the horizon —
+   a quiet continuation of whatever light and color the visitor just saw,
+   not a second illustration trying to out-do it. */
 .exp-hero-atmosphere {
   position: absolute;
   inset: 0;
@@ -201,100 +219,28 @@ p { margin: 0; }
   );
 }
 
-/* Horizon line: a thin band of the accent color where "mountains" meet
-   "sky" — the one signature visual moment of this template, built
-   entirely from CSS so it re-skins automatically for every future
-   client's own brand colors. */
+/* Horizon line: a thin band of the accent color — the one quiet signature
+   motif of this template, built entirely from CSS so it re-skins
+   automatically for every future client's own brand colors. */
 .exp-hero::before {
   content: "";
   position: absolute;
   left: 0; right: 0;
-  bottom: 38%;
+  bottom: 30%;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--exp-secondary), transparent);
-  opacity: 0.55;
+  opacity: 0.5;
   z-index: -1;
 }
 
-/* Vignette — the single biggest "this isn't a webpage" cue for the least
-   effort. Every film frame has one; almost no website does. */
+/* Vignette — a quiet cinematic finish, cheap and effective either way. */
 .exp-hero::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: radial-gradient(120% 85% at 50% 55%, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
-}
-
-/* The welcome light — one small, steady, warm point low in the valley
-   between the ridgelines. Not decoration: it's the entire emotional
-   thesis of this scene. Someone is there, before the visitor ever meets
-   them. Kept almost still — the faintest flicker, nothing that reads as
-   an "effect." */
-.exp-hero-light {
-  position: absolute;
-  left: 58%;
-  bottom: 20%;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--exp-secondary);
-  box-shadow: 0 0 18px 4px color-mix(in srgb, var(--exp-secondary) 70%, transparent);
-  z-index: 0;
-  animation: exp-light-flicker 6s ease-in-out infinite;
-}
-
-@keyframes exp-light-flicker {
-  0%, 100% { opacity: 0.75; }
-  50% { opacity: 0.95; }
-}
-
-/* Atmospheric haze between the mountain layers — distant terrain reads
-   lighter and softer than the foreground in real air, so this alone
-   sells depth far more convincingly than another flat silhouette. */
-.exp-hero-mist {
-  position: absolute;
-  left: 0; right: 0;
-  bottom: 10%;
-  height: 24%;
-  z-index: -1;
-  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--exp-horizon-warm) 45%, transparent) 55%, transparent);
-  opacity: 0.6;
-}
-
-.exp-hero-range {
-  position: absolute;
-  left: -8%;
-  right: -8%;
-  bottom: 0;
-  will-change: transform;
-}
-
-/* Three ridgelines, each with its own subtle vertical gradient instead of
-   a flat fill, so light falls off toward the peaks the way it does on
-   real terrain — the difference between a mountain and a mountain shape. */
-.exp-hero-range-far {
-  height: 34%;
-  z-index: -1;
-  opacity: 0.4;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--exp-primary) 55%, black), color-mix(in srgb, var(--exp-primary) 68%, black));
-  clip-path: polygon(0% 55%, 10% 42%, 22% 50%, 33% 36%, 47% 48%, 60% 34%, 74% 46%, 88% 32%, 100% 44%, 100% 100%, 0% 100%);
-}
-
-.exp-hero-range-back {
-  height: 26%;
-  z-index: -1;
-  opacity: 0.62;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--exp-primary) 72%, black), color-mix(in srgb, var(--exp-primary) 82%, black));
-  clip-path: polygon(0% 62%, 14% 38%, 27% 54%, 41% 24%, 56% 50%, 71% 20%, 85% 46%, 100% 32%, 100% 100%, 0% 100%);
-}
-
-.exp-hero-range-front {
-  height: 19%;
-  z-index: -1;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--exp-primary) 88%, black), color-mix(in srgb, var(--exp-primary) 97%, black));
-  clip-path: polygon(0% 72%, 16% 40%, 32% 60%, 49% 30%, 63% 56%, 80% 34%, 100% 52%, 100% 100%, 0% 100%);
+  background: radial-gradient(120% 85% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.35) 100%);
 }
 
 .exp-hero-content {
@@ -305,52 +251,49 @@ p { margin: 0; }
   align-items: center;
   gap: 14px;
   padding: 0 28px;
-  padding-bottom: 12vh;
   text-align: center;
 }
 
 .exp-headline {
   font-family: var(--exp-font-display);
   font-weight: 500;
-  font-size: clamp(1.7rem, 6vw, 2.5rem);
-  line-height: 1.18;
-  letter-spacing: -0.005em;
-  max-width: 14ch;
+  font-size: clamp(2rem, 7.5vw, 2.9rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  max-width: 15ch;
   color: var(--exp-ink);
-  animation: exp-focus-in 1.6s var(--exp-ease) 1.8s both;
+  animation: exp-focus-in 0.9s var(--exp-ease) 0.15s both;
 }
 
 .exp-subheadline {
-  font-size: 0.98rem;
+  font-size: 1.02rem;
   line-height: 1.55;
-  max-width: 34ch;
+  max-width: 36ch;
   color: var(--exp-ink-muted);
-  animation: exp-focus-in 1.6s var(--exp-ease) 2.1s both;
+  animation: exp-focus-in 0.9s var(--exp-ease) 0.3s both;
 }
 
 /* Headline arrives like a camera settling into focus, not a UI element
-   fading in — small blur-to-sharp resolves alongside the fade. It waits
-   until the scene itself has had a full quiet beat first. */
+   fading in — a small blur-to-sharp resolve alongside the fade. */
 @keyframes exp-focus-in {
   from { opacity: 0; transform: translateY(10px) scale(1.015); filter: blur(6px); }
   to { opacity: 1; transform: none; filter: blur(0); }
 }
 
-/* Curtain — a slow fade up from black, like eyes adjusting to the dark,
-   or a film opening on a scene already in progress. The visitor sees the
-   place, alone, before any word appears. */
+/* Curtain — a brief, graceful arrival. This page is a place the visitor
+   is delivered to, not a second dramatic opening competing with the one
+   that already happened, so this stays quick and quiet on purpose. */
 .exp-curtain {
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: #000;
+  background: var(--exp-deep);
   pointer-events: none;
-  animation: exp-curtain-lift 2.4s var(--exp-ease) both;
+  animation: exp-curtain-lift 0.8s var(--exp-ease) both;
 }
 
 @keyframes exp-curtain-lift {
   from { opacity: 1; }
-  40% { opacity: 0.55; }
   to { opacity: 0; }
 }
 
@@ -384,7 +327,6 @@ p { margin: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .exp-hero-light { animation: none; opacity: 0.85; }
   .exp-curtain { animation: none; opacity: 0; }
 }
 
@@ -418,7 +360,7 @@ p { margin: 0; }
   box-shadow:
     0 0 0 1px var(--exp-glass-border),
     0 40px 70px -30px rgba(0, 0, 0, 0.65),
-    0 0 32px -16px color-mix(in srgb, var(--exp-secondary) 28%, transparent);
+    0 0 32px -16px color-mix(in oklch, var(--exp-secondary) 28%, transparent);
 }
 
 .exp-video {
@@ -435,7 +377,7 @@ p { margin: 0; }
   align-items: center;
   justify-content: center;
   gap: 14px;
-  background: radial-gradient(120% 140% at 30% 20%, color-mix(in srgb, var(--exp-secondary) 14%, transparent), transparent 60%);
+  background: radial-gradient(120% 140% at 30% 20%, color-mix(in oklch, var(--exp-secondary) 14%, transparent), transparent 60%);
 }
 
 .exp-video-placeholder p {
@@ -544,8 +486,8 @@ p { margin: 0; }
   justify-content: center;
   color: var(--exp-secondary);
   background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid color-mix(in srgb, var(--exp-secondary) 55%, transparent);
-  box-shadow: 0 0 26px -6px color-mix(in srgb, var(--exp-secondary) 60%, transparent);
+  border: 1.5px solid color-mix(in oklch, var(--exp-secondary) 55%, transparent);
+  box-shadow: 0 0 26px -6px color-mix(in oklch, var(--exp-secondary) 60%, transparent);
 }
 
 .exp-thankyou {
