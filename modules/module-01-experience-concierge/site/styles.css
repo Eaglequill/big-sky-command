@@ -19,6 +19,14 @@
 
 * { box-sizing: border-box; }
 
+/* Guarantees the loading / fallback / experience states never show at the
+   same time. Without this, .state-screen's and .experience's own
+   `display: flex` rules (below) silently override the browser's default
+   handling of the `hidden` attribute that app.js relies on. */
+[hidden] {
+  display: none !important;
+}
+
 html, body {
   margin: 0;
   padding: 0;
