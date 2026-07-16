@@ -182,6 +182,51 @@ p { margin: 0; }
   z-index: -1;
 }
 
+/* Vignette — the single biggest "this isn't a webpage" cue for the least
+   effort. Every film frame has one; almost no website does. */
+.exp-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(120% 85% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.38) 100%);
+}
+
+/* A slow, barely-perceptible breath of light near the horizon — the one
+   signal that this is a living scene rather than a static illustration.
+   Kept subtle on purpose: atmosphere, not a special effect. */
+.exp-hero-glow {
+  position: absolute;
+  left: 50%;
+  bottom: 30%;
+  width: 70vw;
+  max-width: 640px;
+  height: 40vh;
+  transform: translateX(-50%);
+  z-index: -1;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--exp-secondary) 20%, transparent), transparent 72%);
+  animation: exp-glow-breathe 11s ease-in-out infinite;
+}
+
+@keyframes exp-glow-breathe {
+  0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.85; transform: translateX(-50%) scale(1.08); }
+}
+
+/* Atmospheric haze between the two mountain layers — distant terrain reads
+   as lighter and softer than the foreground in real air, so this alone
+   sells depth far more convincingly than a second flat silhouette. */
+.exp-hero-mist {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 8%;
+  height: 22%;
+  z-index: -1;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--exp-sky) 55%, transparent) 60%, transparent);
+  opacity: 0.5;
+}
+
 .exp-hero-range {
   position: absolute;
   left: -5%;
@@ -189,6 +234,7 @@ p { margin: 0; }
   bottom: 0;
   height: 40%;
   z-index: -1;
+  will-change: transform;
 }
 
 .exp-hero-range-back {
@@ -205,31 +251,13 @@ p { margin: 0; }
 
 .exp-hero-content {
   position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
   padding: 0 28px;
   text-align: center;
-}
-
-.exp-logo {
-  max-height: 44px;
-  width: auto;
-  margin-bottom: 10px;
-  filter: brightness(0) invert(1);
-  opacity: 0.95;
-}
-
-.exp-eyebrow {
-  margin: 0;
-  font-family: var(--exp-font-body);
-  font-size: 0.76rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--exp-secondary);
-  animation: exp-fade-up 0.9s var(--exp-ease) both;
 }
 
 .exp-headline {
@@ -240,7 +268,7 @@ p { margin: 0; }
   letter-spacing: -0.01em;
   max-width: 15ch;
   color: var(--exp-ink);
-  animation: exp-fade-up 0.9s var(--exp-ease) 0.12s both;
+  animation: exp-focus-in 1.3s var(--exp-ease) 0.9s both;
 }
 
 .exp-subheadline {
@@ -248,12 +276,33 @@ p { margin: 0; }
   line-height: 1.55;
   max-width: 36ch;
   color: var(--exp-ink-muted);
-  animation: exp-fade-up 0.9s var(--exp-ease) 0.24s both;
+  animation: exp-focus-in 1.3s var(--exp-ease) 1.1s both;
 }
 
-@keyframes exp-fade-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: none; }
+/* Headline arrives like a camera settling into focus, not a UI element
+   fading in — small blur-to-sharp resolves alongside the fade. */
+@keyframes exp-focus-in {
+  from { opacity: 0; transform: translateY(10px) scale(1.015); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+
+/* Curtain — the scene starts dim and rises over the first second, so the
+   opening has a genuine beat of anticipation instead of everything
+   appearing at once. Matches --exp-deep so it reads as part of the
+   atmosphere lifting, not a loading overlay. */
+.exp-curtain {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: var(--exp-deep);
+  pointer-events: none;
+  animation: exp-curtain-lift 1.1s var(--exp-ease) both;
+}
+
+@keyframes exp-curtain-lift {
+  from { opacity: 1; }
+  60% { opacity: 1; }
+  to { opacity: 0; }
 }
 
 .exp-scroll-cue {
@@ -261,6 +310,7 @@ p { margin: 0; }
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 1;
   width: 1px;
   height: 38px;
   background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.45));
@@ -284,7 +334,30 @@ p { margin: 0; }
   100% { top: 32px; opacity: 0; }
 }
 
-/* ---------------- 2. Welcome video — a window, not a component ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .exp-hero-glow { animation: none; opacity: 0.65; }
+  .exp-curtain { animation: none; opacity: 0; }
+}
+
+/* ---------------- 2. Welcome video — where the business is introduced ---------------- */
+
+.exp-video-logo {
+  max-height: 34px;
+  width: auto;
+  margin-bottom: 2px;
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+
+.exp-video-caption {
+  margin: 0;
+  font-family: var(--exp-font-body);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--exp-secondary);
+}
 
 .exp-video-frame {
   position: relative;

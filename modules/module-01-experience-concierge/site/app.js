@@ -29,11 +29,14 @@
     notFound: document.getElementById("state-notfound"),
     experience: document.getElementById("experience"),
 
-    logo: document.getElementById("exp-logo"),
-    eyebrow: document.getElementById("exp-eyebrow"),
     headline: document.getElementById("exp-headline"),
     subheadline: document.getElementById("exp-subheadline"),
 
+    heroRangeBack: document.querySelector(".exp-hero-range-back"),
+    heroRangeFront: document.querySelector(".exp-hero-range-front"),
+
+    videoLogo: document.getElementById("exp-video-logo"),
+    videoCaption: document.getElementById("exp-video-caption"),
     video: document.getElementById("exp-video"),
     videoPlaceholder: document.getElementById("exp-video-placeholder"),
     videoPlaceholderText: document.getElementById("exp-video-placeholder-text"),
@@ -129,25 +132,41 @@
     targets.forEach(function (el) { observer.observe(el); });
   }
 
+  // Gives the hero mountains real depth: the back range drifts slower than
+  // the front range as the visitor scrolls, the way distant terrain moves
+  // less than the foreground when you walk past it. Skipped entirely under
+  // prefers-reduced-motion, and stops doing any work once the hero has
+  // scrolled out of view.
+  function initHeroParallax() {
+    if (!els.heroRangeBack || !els.heroRangeFront) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    var hero = document.getElementById("exp-hero");
+    if (!hero) return;
+
+    var ticking = false;
+    function apply() {
+      ticking = false;
+      var heroHeight = hero.offsetHeight || window.innerHeight;
+      var progress = Math.min(Math.max(window.scrollY / heroHeight, 0), 1);
+      if (progress >= 1) return; // hero is off-screen, nothing left to do
+      els.heroRangeBack.style.transform = "translateY(" + (progress * 22) + "px)";
+      els.heroRangeFront.style.transform = "translateY(" + (progress * 50) + "px)";
+    }
+    window.addEventListener("scroll", function () {
+      if (!ticking) {
+        window.requestAnimationFrame(apply);
+        ticking = true;
+      }
+    }, { passive: true });
+  }
+
   function renderExperience(record) {
     document.title = (record.experience_name || "Big Sky Command™ Experience");
 
     applyBrandColors(record);
 
-    // --- Hero ---
-    if (isUsable(record.logo_url)) {
-      els.logo.src = record.logo_url;
-      els.logo.alt = record.business_name || "";
-      els.logo.hidden = false;
-    }
-
-    if (isUsable(record.business_name)) {
-      els.eyebrow.textContent = record.business_name;
-      els.eyebrow.hidden = false;
-    } else {
-      els.eyebrow.hidden = true;
-    }
-
+    // --- Hero: emotional hook only — no identity here on purpose ---
     els.headline.textContent = record.headline || "";
 
     if (isUsable(record.subheadline)) {
@@ -161,7 +180,20 @@
     // by name with a sensible fallback.
     var businessLabel = isUsable(record.business_name) ? record.business_name : "your business";
 
-    // --- Welcome video: always shows something ---
+    // --- Welcome video: this is where the business is introduced ---
+    if (isUsable(record.logo_url)) {
+      els.videoLogo.src = record.logo_url;
+      els.videoLogo.alt = record.business_name || "";
+      els.videoLogo.hidden = false;
+    }
+
+    if (isUsable(record.business_name)) {
+      els.videoCaption.textContent = "A word from " + record.business_name;
+      els.videoCaption.hidden = false;
+    } else {
+      els.videoCaption.hidden = true;
+    }
+
     if (isUsable(record.welcome_video_url)) {
       els.video.src = record.welcome_video_url;
       els.video.hidden = false;
@@ -197,6 +229,7 @@
 
     showState("experience");
     initScrollReveal();
+    initHeroParallax();
   }
 
   async function loadExperience() {

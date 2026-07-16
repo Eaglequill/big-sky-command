@@ -48,26 +48,32 @@
   <!-- Experience template: populated entirely from the database record -->
   <main id="experience" class="experience" hidden>
 
-    <!-- 1. HERO — full-height, sky/horizon signature, minimal, mobile-first -->
+    <!-- 1. HERO — the opening beat. No identity here on purpose: the visitor
+         should feel curiosity, not recognize a company. Big Sky Lead
+         Partners is introduced later, at the welcome video. -->
     <section class="exp-hero" id="exp-hero">
+      <div class="exp-hero-glow" aria-hidden="true"></div>
       <div class="exp-hero-range exp-hero-range-back" aria-hidden="true"></div>
+      <div class="exp-hero-mist" aria-hidden="true"></div>
       <div class="exp-hero-range exp-hero-range-front" aria-hidden="true"></div>
       <div class="exp-hero-content">
-        <img id="exp-logo" class="exp-logo" src="" alt="" hidden />
-        <p id="exp-eyebrow" class="exp-eyebrow"></p>
         <h1 id="exp-headline" class="exp-headline"></h1>
         <p id="exp-subheadline" class="exp-subheadline" hidden></p>
       </div>
       <div class="exp-scroll-cue" aria-hidden="true">
         <span></span>
       </div>
+      <div class="exp-curtain" aria-hidden="true"></div>
     </section>
 
-    <!-- 2. WELCOME VIDEO — the centerpiece. Always renders: either the real
+    <!-- 2. WELCOME VIDEO — the centerpiece, and where the business is
+         introduced for the first time. Always renders: either the real
          video, or a designed placeholder card. Swapping in the real video
          later is a data change only — no markup or CSS changes required. -->
     <section class="exp-section" id="exp-video-section" data-reveal>
       <div class="exp-section-inner">
+        <img id="exp-video-logo" class="exp-video-logo" src="" alt="" hidden />
+        <p id="exp-video-caption" class="exp-video-caption" hidden></p>
         <div id="exp-video-frame" class="exp-video-frame">
           <video id="exp-video" class="exp-video" controls playsinline preload="metadata" hidden></video>
           <div id="exp-video-placeholder" class="exp-video-placeholder">
