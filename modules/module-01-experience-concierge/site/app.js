@@ -11,11 +11,14 @@
 //   1. Read the Experience ID from the URL path (/e/{EXPERIENCE_ID}).
 //   2. Ask the data provider for an active record with that experience_id.
 //   3. Populate the template in index.html with that record's data.
-//   4. If no ID is present, or no active record matches, show the
+//   4. Play the shared Opening Sequence if one exists (see
+//      initIntroSequence below), then reveal the page.
+//   5. If no ID is present, or no active record matches, show the
 //      fallback message instead.
 //
 // Journey this template renders, in fixed order (see index.html):
-//   Hero → Welcome Video → Lead Capture → AI Concierge (reserved) → Thank You
+//   Opening Sequence (reserved) → Hero → Welcome Video → Lead Capture →
+//   AI Concierge (reserved) → Thank You
 // Video and Lead Capture always render — either the real content, or a
 // designed placeholder state — so every future client's experience shows
 // the full journey from day one, and swapping in real assets later never
@@ -29,12 +32,10 @@
     notFound: document.getElementById("state-notfound"),
     experience: document.getElementById("experience"),
 
+    intro: document.getElementById("exp-intro-sequence"),
+
     headline: document.getElementById("exp-headline"),
     subheadline: document.getElementById("exp-subheadline"),
-
-    heroRangeFar: document.querySelector(".exp-hero-range-far"),
-    heroRangeBack: document.querySelector(".exp-hero-range-back"),
-    heroRangeFront: document.querySelector(".exp-hero-range-front"),
 
     videoLogo: document.getElementById("exp-video-logo"),
     videoCaption: document.getElementById("exp-video-caption"),
@@ -133,36 +134,48 @@
     targets.forEach(function (el) { observer.observe(el); });
   }
 
-  // Gives the hero mountains real depth: the back range drifts slower than
-  // the front range as the visitor scrolls, the way distant terrain moves
-  // less than the foreground when you walk past it. Skipped entirely under
-  // prefers-reduced-motion, and stops doing any work once the hero has
-  // scrolled out of view.
-  function initHeroParallax() {
-    if (!els.heroRangeBack || !els.heroRangeFront) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  // Plays the shared Opening Sequence (the "eagle" intro) if one has been
+  // installed, then calls `next()`. If no intro file exists — the case
+  // today — this fails silently and calls `next()` immediately, so the
+  // visitor never sees a flash, a broken player, or a placeholder. This
+  // is engine-level content shared by every client, not something a
+  // Business Overlay ever configures.
+  function initIntroSequence(next) {
+    var video = els.intro;
+    if (!video) { next(); return; }
 
-    var hero = document.getElementById("exp-hero");
-    if (!hero) return;
-
-    var ticking = false;
-    function apply() {
-      ticking = false;
-      var heroHeight = hero.offsetHeight || window.innerHeight;
-      var progress = Math.min(Math.max(window.scrollY / heroHeight, 0), 1);
-      if (progress >= 1) return; // hero is off-screen, nothing left to do
-      if (els.heroRangeFar) {
-        els.heroRangeFar.style.transform = "translateY(" + (progress * 10) + "px)";
-      }
-      els.heroRangeBack.style.transform = "translateY(" + (progress * 22) + "px)";
-      els.heroRangeFront.style.transform = "translateY(" + (progress * 50) + "px)";
+    var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var settled = false;
+    function proceed() {
+      if (settled) return;
+      settled = true;
+      video.hidden = true;
+      video.removeEventListener("click", proceed);
+      next();
     }
-    window.addEventListener("scroll", function () {
-      if (!ticking) {
-        window.requestAnimationFrame(apply);
-        ticking = true;
-      }
-    }, { passive: true });
+
+    // No intro file installed (the current state for every client until
+    // real footage exists) — this fires almost immediately and we move on.
+    video.addEventListener("error", proceed);
+
+    if (reducedMotion) {
+      // Real footage, once it exists, is narrative content rather than
+      // decorative motion — but skipping it under reduced-motion is the
+      // more respectful default until there's a reason to reconsider.
+      proceed();
+      return;
+    }
+
+    video.addEventListener("loadeddata", function () {
+      video.hidden = false;
+      video.play().catch(proceed); // autoplay can be blocked — fail gracefully
+    });
+    video.addEventListener("ended", proceed);
+    video.addEventListener("click", proceed); // tap/click anywhere to skip
+
+    // Safety net: never let a stalled video trap the visitor on a blank
+    // screen. If nothing has happened within 8 seconds, move on.
+    window.setTimeout(proceed, 8000);
   }
 
   function renderExperience(record) {
@@ -220,20 +233,19 @@
       els.formPlaceholder.hidden = false;
     }
 
-    // --- AI Concierge: reserved, structural only, lightly personalized ---
+    // --- Reserved guidance section: the technology stays invisible.
+    // Customers aren't buying AI — they're buying a personally guided
+    // experience. This copy describes what the visitor will feel, never
+    // what powers it. ---
     els.aiCopy.textContent =
-      "We're building an AI Concierge to greet every visitor personally, " +
-      "answer questions about " + businessLabel + " in real time, and guide " +
-      "them straight to the next step. This space is reserved for it.";
+      "Soon, every visitor will be welcomed the moment they arrive, get real " +
+      "answers about " + businessLabel + " right when they need them, and " +
+      "always know exactly what to do next.";
 
     // --- Thank you: always shows something ---
     els.thankYou.textContent = isUsable(record.thank_you_message)
       ? record.thank_you_message
       : "Thanks for connecting with " + businessLabel + ". We received your information and will follow up personally.";
-
-    showState("experience");
-    initScrollReveal();
-    initHeroParallax();
   }
 
   async function loadExperience() {
@@ -266,6 +278,10 @@
     }
 
     renderExperience(data);
+    initIntroSequence(function () {
+      showState("experience");
+      initScrollReveal();
+    });
   }
 
   document.addEventListener("DOMContentLoaded", function () {

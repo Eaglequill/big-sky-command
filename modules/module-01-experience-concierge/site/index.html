@@ -26,7 +26,10 @@
        or edit it in Supabase instead.
 
        Journey this template is built around, in fixed order:
-         Hero → Welcome Video → Lead Capture → AI Concierge (reserved) → Thank You
+         Opening Sequence (reserved) → Hero → Welcome Video → Lead Capture → AI Concierge (reserved) → Thank You
+       The Opening Sequence is shared engine-level content (one cinematic
+       intro for every client), not Business Overlay data — see the
+       comment above <video id="exp-intro-sequence"> below.
        =================================================================== -->
 
   <!-- Loading state: shown immediately, hidden once a record loads or fails -->
@@ -48,16 +51,24 @@
   <!-- Experience template: populated entirely from the database record -->
   <main id="experience" class="experience" hidden>
 
-    <!-- 1. HERO — the opening beat. No identity here on purpose: the visitor
-         should feel curiosity, not recognize a company. Big Sky Lead
-         Partners is introduced later, at the welcome video. -->
+    <!-- OPENING SEQUENCE — reserved for the eagle sequence: one shared,
+         cinematic intro that plays before every Big Sky Command
+         Experience, regardless of client. Not business-specific, so it
+         is not a Business Overlay field — it's engine-level content, a
+         single video file the installer drops in later. Today, with no
+         file present, this fails silently in app.js and the visitor
+         goes straight to the hero below — no placeholder, no flash, no
+         broken state. The moment real footage exists, it's a file drop,
+         not a rebuild. -->
+    <video id="exp-intro-sequence" class="exp-intro-sequence" src="intro.mp4" muted playsinline hidden></video>
+
+    <!-- 1. HERO — where the visitor lands after the opening sequence. No
+         identity here on purpose: the visitor should feel curiosity, not
+         recognize a company. Big Sky Lead Partners is introduced later,
+         at the welcome video. This is a place to arrive, not a second
+         cinematic moment competing with the one that just happened. -->
     <section class="exp-hero" id="exp-hero">
       <div class="exp-hero-atmosphere" aria-hidden="true"></div>
-      <div class="exp-hero-range exp-hero-range-far" aria-hidden="true"></div>
-      <div class="exp-hero-range exp-hero-range-back" aria-hidden="true"></div>
-      <div class="exp-hero-mist" aria-hidden="true"></div>
-      <div class="exp-hero-light" aria-hidden="true"></div>
-      <div class="exp-hero-range exp-hero-range-front" aria-hidden="true"></div>
       <div class="exp-hero-content">
         <h1 id="exp-headline" class="exp-headline"></h1>
         <p id="exp-subheadline" class="exp-subheadline" hidden></p>
@@ -113,7 +124,7 @@
           <span style="top:34%; left:8%;"></span>
           <span style="top:30%; left:90%;"></span>
         </div>
-        <h2 class="exp-ai-heading">Your AI Concierge is on its way</h2>
+        <h2 class="exp-ai-heading">Personally Guided, Every Step</h2>
         <p id="exp-ai-copy" class="exp-ai-copy"></p>
       </div>
     </section>
