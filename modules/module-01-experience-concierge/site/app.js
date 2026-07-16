@@ -32,6 +32,7 @@
     headline: document.getElementById("exp-headline"),
     subheadline: document.getElementById("exp-subheadline"),
 
+    heroRangeFar: document.querySelector(".exp-hero-range-far"),
     heroRangeBack: document.querySelector(".exp-hero-range-back"),
     heroRangeFront: document.querySelector(".exp-hero-range-front"),
 
@@ -150,6 +151,9 @@
       var heroHeight = hero.offsetHeight || window.innerHeight;
       var progress = Math.min(Math.max(window.scrollY / heroHeight, 0), 1);
       if (progress >= 1) return; // hero is off-screen, nothing left to do
+      if (els.heroRangeFar) {
+        els.heroRangeFar.style.transform = "translateY(" + (progress * 10) + "px)";
+      }
       els.heroRangeBack.style.transform = "translateY(" + (progress * 22) + "px)";
       els.heroRangeFront.style.transform = "translateY(" + (progress * 50) + "px)";
     }
