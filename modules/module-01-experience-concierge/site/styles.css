@@ -352,13 +352,14 @@ p { margin: 0; }
   font-family: var(--exp-font-display);
   font-style: italic;
   font-weight: 500;
-  font-size: clamp(1.35rem, 4.4vw, 1.85rem);
+  font-size: clamp(1.3rem, 3.6vw, 1.7rem);
   line-height: 1.5;
   color: var(--exp-ink);
-  max-width: 22ch;
+  max-width: 48ch;
 }
 
 #exp-philosophy-section .exp-section-inner {
+  max-width: 680px;
   padding-top: 64px;
   padding-bottom: 64px;
 }
