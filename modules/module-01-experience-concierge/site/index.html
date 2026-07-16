@@ -26,7 +26,8 @@
        or edit it in Supabase instead.
 
        Journey this template is built around, in fixed order:
-         Opening Sequence (reserved) → Hero → Welcome Video → Lead Capture → AI Concierge (reserved) → Thank You
+         Opening Sequence (reserved) → Hero → Philosophy → Welcome Video →
+         Lead Capture → AI Concierge (reserved) → Thank You
        The Opening Sequence is shared engine-level content (one cinematic
        intro for every client), not Business Overlay data — see the
        comment above <video id="exp-intro-sequence"> below.
@@ -62,14 +63,15 @@
          not a rebuild. -->
     <video id="exp-intro-sequence" class="exp-intro-sequence" src="intro.mp4" muted playsinline hidden></video>
 
-    <!-- 1. HERO — where the visitor lands after the opening sequence. No
-         identity here on purpose: the visitor should feel curiosity, not
-         recognize a company. Big Sky Lead Partners is introduced later,
-         at the welcome video. This is a place to arrive, not a second
-         cinematic moment competing with the one that just happened. -->
+    <!-- 1. HERO — where the visitor lands after the opening sequence.
+         Identity is present but quiet (a small eyebrow, not a logo
+         lockup) — enough that the visitor knows whose experience this
+         is, without it competing with the mission statement carried by
+         the headline. -->
     <section class="exp-hero" id="exp-hero">
       <div class="exp-hero-atmosphere" aria-hidden="true"></div>
       <div class="exp-hero-content">
+        <p id="exp-eyebrow" class="exp-eyebrow"></p>
         <h1 id="exp-headline" class="exp-headline"></h1>
         <p id="exp-subheadline" class="exp-subheadline" hidden></p>
       </div>
@@ -79,6 +81,21 @@
       <div class="exp-curtain" aria-hidden="true"></div>
     </section>
 
+    <!-- PHILOSOPHY — a single cinematic beat between the hero and the
+         welcome video. This is Big Sky Command's own brand statement,
+         not the client's — the same words appear on every future
+         client's Experience, the way "Powered by Big Sky Command™"
+         already does in the footer. Engine-level content, not a
+         Business Overlay field: no database change required. -->
+    <section class="exp-section" id="exp-philosophy-section" data-reveal>
+      <div class="exp-section-inner">
+        <p class="exp-philosophy">
+          Every Customer Deserves More Than a Website.<br />
+          Every Business Deserves More Than a Lead.
+        </p>
+      </div>
+    </section>
+
     <!-- 2. WELCOME VIDEO — the centerpiece, and where the business is
          introduced for the first time. Always renders: either the real
          video, or a designed placeholder card. Swapping in the real video
@@ -86,7 +103,7 @@
     <section class="exp-section" id="exp-video-section" data-reveal>
       <div class="exp-section-inner">
         <img id="exp-video-logo" class="exp-video-logo" src="" alt="" hidden />
-        <p id="exp-video-caption" class="exp-video-caption" hidden></p>
+        <p class="exp-video-caption">A Personal Welcome</p>
         <div id="exp-video-frame" class="exp-video-frame">
           <video id="exp-video" class="exp-video" controls playsinline preload="metadata" hidden></video>
           <div id="exp-video-placeholder" class="exp-video-placeholder">

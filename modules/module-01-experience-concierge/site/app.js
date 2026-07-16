@@ -36,9 +36,9 @@
 
     headline: document.getElementById("exp-headline"),
     subheadline: document.getElementById("exp-subheadline"),
+    eyebrow: document.getElementById("exp-eyebrow"),
 
     videoLogo: document.getElementById("exp-video-logo"),
-    videoCaption: document.getElementById("exp-video-caption"),
     video: document.getElementById("exp-video"),
     videoPlaceholder: document.getElementById("exp-video-placeholder"),
     videoPlaceholderText: document.getElementById("exp-video-placeholder-text"),
@@ -197,18 +197,22 @@
     // by name with a sensible fallback.
     var businessLabel = isUsable(record.business_name) ? record.business_name : "your business";
 
-    // --- Welcome video: this is where the business is introduced ---
+    // --- Hero identity: quiet, doesn't compete with the mission headline ---
+    if (isUsable(record.business_name)) {
+      els.eyebrow.textContent = record.business_name;
+      els.eyebrow.hidden = false;
+    } else {
+      els.eyebrow.hidden = true;
+    }
+
+    // --- Welcome video: identity already established in the hero, so this
+    // section's caption stays static ("A Personal Welcome") rather than
+    // repeating the business name a second time. Only the logo (a visual
+    // mark, not a repeated name) still comes from data. ---
     if (isUsable(record.logo_url)) {
       els.videoLogo.src = record.logo_url;
       els.videoLogo.alt = record.business_name || "";
       els.videoLogo.hidden = false;
-    }
-
-    if (isUsable(record.business_name)) {
-      els.videoCaption.textContent = "A word from " + record.business_name;
-      els.videoCaption.hidden = false;
-    } else {
-      els.videoCaption.hidden = true;
     }
 
     if (isUsable(record.welcome_video_url)) {
