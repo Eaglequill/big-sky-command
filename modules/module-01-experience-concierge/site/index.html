@@ -9,17 +9,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Big Sky Command™ — Experience</title>
   <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
   <!-- ===================================================================
-       This page is one reusable Experience Engine template. It contains
-       NO client-specific content. Every piece of text, color, image, and
-       embed you see rendered on screen is loaded at runtime from the
-       Supabase "experiences" record matching the Experience ID in the
-       URL (e.g. /e/BS000001). Do not hardcode business content here —
-       add or edit it in Supabase instead.
+       This page is ONE reusable Experience Engine template, shared by
+       every Big Sky Command client. It contains NO client-specific
+       content. Every piece of text, color, image, and embed you see
+       rendered on screen is loaded at runtime from the Supabase
+       "experiences" record matching the Experience ID in the URL
+       (e.g. /e/BS000001). Do not hardcode business content here — add
+       or edit it in Supabase instead.
+
+       Journey this template is built around, in fixed order:
+         Hero → Welcome Video → Lead Capture → AI Concierge (reserved) → Thank You
        =================================================================== -->
 
   <!-- Loading state: shown immediately, hidden once a record loads or fails -->
@@ -41,29 +48,76 @@
   <!-- Experience template: populated entirely from the database record -->
   <main id="experience" class="experience" hidden>
 
-    <header class="exp-header">
-      <img id="exp-logo" class="exp-logo" src="" alt="" hidden />
-    </header>
-
-    <section class="exp-hero">
-      <h1 id="exp-headline" class="exp-headline"></h1>
-      <p id="exp-subheadline" class="exp-subheadline"></p>
+    <!-- 1. HERO — full-height, sky/horizon signature, minimal, mobile-first -->
+    <section class="exp-hero" id="exp-hero">
+      <div class="exp-hero-range exp-hero-range-back" aria-hidden="true"></div>
+      <div class="exp-hero-range exp-hero-range-front" aria-hidden="true"></div>
+      <div class="exp-hero-content">
+        <img id="exp-logo" class="exp-logo" src="" alt="" hidden />
+        <p id="exp-eyebrow" class="exp-eyebrow"></p>
+        <h1 id="exp-headline" class="exp-headline"></h1>
+        <p id="exp-subheadline" class="exp-subheadline" hidden></p>
+      </div>
+      <div class="exp-scroll-cue" aria-hidden="true">
+        <span></span>
+      </div>
     </section>
 
-    <section id="exp-video-section" class="exp-video-section" hidden>
-      <video id="exp-video" class="exp-video" controls playsinline preload="metadata"></video>
+    <!-- 2. WELCOME VIDEO — the centerpiece. Always renders: either the real
+         video, or a designed placeholder card. Swapping in the real video
+         later is a data change only — no markup or CSS changes required. -->
+    <section class="exp-section" id="exp-video-section" data-reveal>
+      <div class="exp-section-inner">
+        <div id="exp-video-frame" class="exp-video-frame">
+          <video id="exp-video" class="exp-video" controls playsinline preload="metadata" hidden></video>
+          <div id="exp-video-placeholder" class="exp-video-placeholder">
+            <span class="exp-play-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+            </span>
+            <p id="exp-video-placeholder-text">Your welcome video is on its way.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <section class="exp-cta-section">
-      <button id="exp-cta" type="button" class="exp-cta-button"></button>
+    <!-- 3. LEAD CAPTURE — feels like the natural next step, not a form. -->
+    <section class="exp-section" id="exp-form-section" data-reveal>
+      <div class="exp-section-inner">
+        <h2 id="exp-cta" class="exp-cta-heading"></h2>
+        <div class="exp-form-panel">
+          <div id="exp-form-embed" class="exp-form-embed"></div>
+          <div id="exp-form-placeholder" class="exp-form-placeholder">
+            <p>We're putting the finishing touches on this step.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <section id="exp-form-section" class="exp-form-section" hidden>
-      <div id="exp-form-embed" class="exp-form-embed"></div>
+    <!-- 4. AI CONCIERGE — reserved space only. Purely structural; not wired
+         to any AI system yet. Safe to leave as-is for every future client
+         until a real Concierge module replaces or extends it. -->
+    <section class="exp-section" id="exp-ai-section" data-reveal>
+      <div class="exp-section-inner exp-ai-inner">
+        <div class="exp-ai-stars" aria-hidden="true">
+          <span style="top:10%; left:18%;"></span>
+          <span style="top:22%; left:76%;"></span>
+          <span style="top:6%; left:52%;"></span>
+          <span style="top:34%; left:8%;"></span>
+          <span style="top:30%; left:90%;"></span>
+        </div>
+        <h2 class="exp-ai-heading">Your AI Concierge is on its way</h2>
+        <p id="exp-ai-copy" class="exp-ai-copy"></p>
+      </div>
     </section>
 
-    <section id="exp-thankyou-section" class="exp-thankyou-section" hidden>
-      <p id="exp-thankyou" class="exp-thankyou"></p>
+    <!-- 5. THANK YOU — intentional, premium closing beat. -->
+    <section class="exp-section" id="exp-thankyou-section" data-reveal>
+      <div class="exp-section-inner exp-thankyou-inner">
+        <span class="exp-check" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <p id="exp-thankyou" class="exp-thankyou"></p>
+      </div>
     </section>
 
     <footer class="exp-footer">

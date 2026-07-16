@@ -1,27 +1,44 @@
 /* Big Sky Command™ — Experience Engine
-   Reusable stylesheet. No client-specific colors, copy, or imagery live
-   here — --exp-primary / --exp-secondary are set at runtime by app.js
-   from the loaded Supabase record. Defaults below only apply before a
-   record loads, or if a record leaves a color blank. */
+   Reusable stylesheet, shared by every client's Experience. No
+   client-specific colors, copy, or imagery live here — --exp-primary /
+   --exp-secondary are set at runtime by app.js from the loaded Supabase
+   record.
+
+   Design intent: this is not a landing page. There are no card
+   components, no section labels, no badges — just one continuous
+   atmosphere (a "sky") that deepens as the visitor descends through the
+   experience, the way a room feels different the further you walk into
+   it. Every future client gets their own sky, generated entirely from
+   their own brand colors. Defaults below are Big Sky Lead Partners' own
+   palette (Dusk Navy / Horizon Gold). */
 
 :root {
-  --exp-primary: #1b2a41;
-  --exp-secondary: #d4af37;
-  --exp-text: #1a1a1a;
-  --exp-muted: #5c6570;
-  --exp-bg: #ffffff;
-  --exp-surface: #f6f7f9;
-  --exp-border: #e3e6ea;
-  --exp-radius: 14px;
+  /* Client-controlled (Business Overlay) */
+  --exp-primary: #1b2a41;    /* Dusk Navy */
+  --exp-secondary: #d4af37;  /* Horizon Gold — used only as a quiet glow/accent */
+
+  /* Engine-owned constants, all derived from the two above so the whole
+     page stays tonally coherent no matter what color a client picks. */
+  --exp-sky: color-mix(in srgb, var(--exp-primary) 42%, white);
+  --exp-mid: color-mix(in srgb, var(--exp-primary) 85%, black);
+  --exp-deep: color-mix(in srgb, var(--exp-primary) 96%, black);
+  --exp-ink: rgba(255, 255, 255, 0.94);
+  --exp-ink-muted: rgba(255, 255, 255, 0.6);
+  --exp-glass: rgba(255, 255, 255, 0.05);
+  --exp-glass-border: rgba(255, 255, 255, 0.14);
+  --exp-radius: 16px;
+  --exp-radius-lg: 22px;
   --exp-max-width: 560px;
-  --exp-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --exp-font-display: "Fraunces", Georgia, serif;
+  --exp-font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --exp-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 * { box-sizing: border-box; }
 
 /* Guarantees the loading / fallback / experience states never show at the
-   same time. Without this, .state-screen's and .experience's own
-   `display: flex` rules (below) silently override the browser's default
+   same time — several rules below set `display` on these same elements,
+   which would otherwise silently override the browser's default
    handling of the `hidden` attribute that app.js relies on. */
 [hidden] {
   display: none !important;
@@ -30,9 +47,9 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--exp-bg);
-  color: var(--exp-text);
-  font-family: var(--exp-font);
+  background: var(--exp-deep);
+  color: var(--exp-ink);
+  font-family: var(--exp-font-body);
   -webkit-text-size-adjust: 100%;
 }
 
@@ -44,15 +61,22 @@ body {
 }
 
 img, video { max-width: 100%; display: block; }
-
 button { font-family: inherit; }
+h1, h2 { margin: 0; }
+p { margin: 0; }
 
 :focus-visible {
-  outline: 3px solid var(--exp-secondary);
-  outline-offset: 2px;
+  outline: 2px solid var(--exp-secondary);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
 /* ---------------- Loading / fallback states ---------------- */
+/* Styled dark from the very first paint (using the default tokens above)
+   so there's no white flash before the real experience loads in. */
 
 .state-screen {
   flex: 1;
@@ -63,161 +87,375 @@ button { font-family: inherit; }
   text-align: center;
   padding: 32px 24px;
   gap: 16px;
+  font-family: var(--exp-font-body);
 }
 
 .state-screen h1 {
   font-size: 1.4rem;
-  margin: 0;
+  font-family: var(--exp-font-display);
+  font-weight: 500;
+  color: var(--exp-ink);
 }
 
 .state-screen p {
-  margin: 0;
   max-width: 40ch;
-  color: var(--exp-muted);
+  color: var(--exp-ink-muted);
   line-height: 1.5;
 }
 
 .spinner {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  border: 3px solid var(--exp-border);
-  border-top-color: var(--exp-primary);
+  border: 2.5px solid rgba(255, 255, 255, 0.18);
+  border-top-color: var(--exp-secondary);
   animation: exp-spin 0.8s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .spinner { animation-duration: 1.6s; }
 }
 
 @keyframes exp-spin {
   to { transform: rotate(360deg); }
 }
 
-/* ---------------- Experience layout ---------------- */
+/* ---------------- Experience shell: one continuous sky ---------------- */
 
 .experience {
   flex: 1;
   width: 100%;
-  max-width: var(--exp-max-width);
-  margin: 0 auto;
-  padding: 24px 20px 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
+  background: linear-gradient(
+    180deg,
+    var(--exp-sky) 0%,
+    var(--exp-primary) 12%,
+    var(--exp-mid) 42%,
+    var(--exp-deep) 100%
+  );
 }
 
-.exp-header {
+.exp-section-inner {
+  width: 100%;
+  max-width: var(--exp-max-width);
+  margin: 0 auto;
+  padding: 88px 24px;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+}
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.9s var(--exp-ease), transform 0.9s var(--exp-ease);
+}
+
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------------- 1. Hero ---------------- */
+
+.exp-hero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Horizon line: a thin band of the accent color where "mountains" meet
+   "sky" — the one signature visual moment of this template, built
+   entirely from CSS so it re-skins automatically for every future
+   client's own brand colors. */
+.exp-hero::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 34%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--exp-secondary), transparent);
+  opacity: 0.5;
+  z-index: -1;
+}
+
+.exp-hero-range {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  bottom: 0;
+  height: 40%;
+  z-index: -1;
+}
+
+.exp-hero-range-back {
+  background: color-mix(in srgb, var(--exp-primary) 75%, black);
+  opacity: 0.5;
+  clip-path: polygon(0% 60%, 12% 40%, 24% 52%, 38% 28%, 52% 46%, 68% 22%, 82% 44%, 100% 30%, 100% 100%, 0% 100%);
+}
+
+.exp-hero-range-front {
+  background: color-mix(in srgb, var(--exp-primary) 94%, black);
+  height: 28%;
+  clip-path: polygon(0% 70%, 15% 45%, 30% 62%, 46% 35%, 60% 58%, 78% 38%, 100% 55%, 100% 100%, 0% 100%);
+}
+
+.exp-hero-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 0 28px;
+  text-align: center;
 }
 
 .exp-logo {
-  max-height: 64px;
+  max-height: 44px;
   width: auto;
+  margin-bottom: 10px;
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
 }
 
-.exp-hero {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.exp-eyebrow {
+  margin: 0;
+  font-family: var(--exp-font-body);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--exp-secondary);
+  animation: exp-fade-up 0.9s var(--exp-ease) both;
 }
 
 .exp-headline {
-  margin: 0;
-  font-size: clamp(1.5rem, 5vw, 2.1rem);
-  line-height: 1.2;
-  font-weight: 700;
-  color: var(--exp-primary);
+  font-family: var(--exp-font-display);
+  font-weight: 500;
+  font-size: clamp(2rem, 7.5vw, 2.9rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  max-width: 15ch;
+  color: var(--exp-ink);
+  animation: exp-fade-up 0.9s var(--exp-ease) 0.12s both;
 }
 
 .exp-subheadline {
-  margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.5;
-  color: var(--exp-muted);
+  font-size: 1.02rem;
+  line-height: 1.55;
+  max-width: 36ch;
+  color: var(--exp-ink-muted);
+  animation: exp-fade-up 0.9s var(--exp-ease) 0.24s both;
 }
 
-.exp-video-section {
-  border-radius: var(--exp-radius);
+@keyframes exp-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.exp-scroll-cue {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 38px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.45));
+}
+
+.exp-scroll-cue span {
+  position: absolute;
+  top: 0;
+  left: -2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--exp-secondary);
+  animation: exp-scroll-drop 2.4s ease-in-out infinite;
+}
+
+@keyframes exp-scroll-drop {
+  0% { top: 0; opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { top: 32px; opacity: 0; }
+}
+
+/* ---------------- 2. Welcome video — a window, not a component ---------------- */
+
+.exp-video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--exp-radius-lg);
   overflow: hidden;
-  background: #000;
+  background: var(--exp-glass);
+  box-shadow:
+    0 0 0 1px var(--exp-glass-border),
+    0 40px 70px -30px rgba(0, 0, 0, 0.65),
+    0 0 32px -16px color-mix(in srgb, var(--exp-secondary) 28%, transparent);
 }
 
 .exp-video {
   width: 100%;
-  border-radius: var(--exp-radius);
+  height: 100%;
+  object-fit: cover;
 }
 
-.exp-cta-section {
+.exp-video-placeholder {
+  position: absolute;
+  inset: 0;
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 14px;
+  background: radial-gradient(120% 140% at 30% 20%, color-mix(in srgb, var(--exp-secondary) 14%, transparent), transparent 60%);
 }
 
-.exp-cta-button {
-  width: 100%;
-  border: none;
-  border-radius: 999px;
-  padding: 16px 24px;
-  font-size: 1.05rem;
+.exp-video-placeholder p {
+  font-size: 0.9rem;
+  color: var(--exp-ink-muted);
+}
+
+.exp-play-glyph {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--exp-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--exp-glass-border);
+}
+
+/* ---------------- 3. Lead capture — light spilling from a doorway ---------------- */
+
+.exp-cta-heading {
+  font-family: var(--exp-font-display);
   font-weight: 600;
-  color: #ffffff;
-  background: var(--exp-primary);
-  cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  font-size: clamp(1.5rem, 4.8vw, 1.95rem);
+  color: var(--exp-ink);
 }
 
-.exp-cta-button:hover { opacity: 0.92; }
-.exp-cta-button:active { transform: scale(0.98); }
-
-.exp-form-section {
-  background: var(--exp-surface);
-  border: 1px solid var(--exp-border);
-  border-radius: var(--exp-radius);
-  padding: 16px;
-}
-
-.exp-form-embed {
+.exp-form-panel {
   width: 100%;
+  background: var(--exp-glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--exp-glass-border);
+  border-radius: var(--exp-radius-lg);
+  padding: 20px;
 }
 
-/* GHL embeds often inject their own iframe; make sure it never overflows */
+.exp-form-embed { width: 100%; }
+
+/* GHL embeds often inject their own iframe; make sure it never overflows
+   and inherits the panel's rounded corners. */
 .exp-form-embed iframe {
   width: 100% !important;
   border: none;
+  border-radius: calc(var(--exp-radius-lg) - 6px);
 }
 
-.exp-thankyou-section {
+.exp-form-placeholder {
+  padding: 26px 12px;
   text-align: center;
-  padding: 14px 16px;
-  border-radius: var(--exp-radius);
-  background: color-mix(in srgb, var(--exp-secondary) 12%, white);
+  color: var(--exp-ink-muted);
+  font-size: 0.95rem;
+}
+
+/* ---------------- 4. AI Concierge (reserved) — a deepening night sky ---------------- */
+
+.exp-ai-inner {
+  position: relative;
+  padding-top: 64px;
+  padding-bottom: 64px;
+}
+
+.exp-ai-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.exp-ai-stars span {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--exp-secondary);
+}
+
+.exp-ai-heading {
+  font-family: var(--exp-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.3rem, 4.5vw, 1.6rem);
+  color: var(--exp-ink);
+}
+
+.exp-ai-copy {
+  color: var(--exp-ink-muted);
+  line-height: 1.65;
+  max-width: 40ch;
+  font-size: 0.95rem;
+}
+
+/* ---------------- 5. Thank you ---------------- */
+
+.exp-thankyou-inner {
+  gap: 18px;
+}
+
+.exp-check {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--exp-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid color-mix(in srgb, var(--exp-secondary) 55%, transparent);
+  box-shadow: 0 0 26px -6px color-mix(in srgb, var(--exp-secondary) 60%, transparent);
 }
 
 .exp-thankyou {
-  margin: 0;
-  font-size: 0.95rem;
-  color: var(--exp-muted);
-  line-height: 1.5;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--exp-ink);
+  max-width: 38ch;
 }
+
+/* ---------------- Footer ---------------- */
 
 .exp-footer {
   text-align: center;
-  margin-top: auto;
-  padding-top: 12px;
+  padding: 30px 20px 44px;
 }
 
 .exp-footer p {
-  margin: 0;
-  font-size: 0.75rem;
-  letter-spacing: 0.02em;
-  color: var(--exp-muted);
-  opacity: 0.7;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--exp-ink-muted);
+  opacity: 0.6;
 }
 
 /* ---------------- Small phones ---------------- */
 
 @media (max-width: 360px) {
-  .experience { padding: 20px 16px 32px; gap: 22px; }
+  .exp-section-inner { padding: 68px 20px; }
+}
+
+/* ---------------- Larger screens ---------------- */
+
+@media (min-width: 720px) {
+  .exp-section-inner { padding: 112px 24px; }
+  .exp-form-panel { padding: 30px; }
 }

@@ -13,6 +13,13 @@
 //   3. Populate the template in index.html with that record's data.
 //   4. If no ID is present, or no active record matches, show the
 //      fallback message instead.
+//
+// Journey this template renders, in fixed order (see index.html):
+//   Hero → Welcome Video → Lead Capture → AI Concierge (reserved) → Thank You
+// Video and Lead Capture always render — either the real content, or a
+// designed placeholder state — so every future client's experience shows
+// the full journey from day one, and swapping in real assets later never
+// requires touching this file or the markup.
 
 (function () {
   "use strict";
@@ -21,15 +28,22 @@
     loading: document.getElementById("state-loading"),
     notFound: document.getElementById("state-notfound"),
     experience: document.getElementById("experience"),
+
     logo: document.getElementById("exp-logo"),
+    eyebrow: document.getElementById("exp-eyebrow"),
     headline: document.getElementById("exp-headline"),
     subheadline: document.getElementById("exp-subheadline"),
-    videoSection: document.getElementById("exp-video-section"),
+
     video: document.getElementById("exp-video"),
+    videoPlaceholder: document.getElementById("exp-video-placeholder"),
+    videoPlaceholderText: document.getElementById("exp-video-placeholder-text"),
+
     cta: document.getElementById("exp-cta"),
-    formSection: document.getElementById("exp-form-section"),
     formEmbed: document.getElementById("exp-form-embed"),
-    thankYouSection: document.getElementById("exp-thankyou-section"),
+    formPlaceholder: document.getElementById("exp-form-placeholder"),
+
+    aiCopy: document.getElementById("exp-ai-copy"),
+
     thankYou: document.getElementById("exp-thankyou")
   };
 
@@ -41,7 +55,8 @@
 
   // A value counts as "provided" only if it's non-empty and isn't one of
   // our own labeled placeholder strings — so an unfilled placeholder
-  // safely hides its section instead of displaying "PLACEHOLDER — ...".
+  // safely falls back to a designed empty state instead of displaying
+  // "PLACEHOLDER — ...".
   function isUsable(value) {
     if (!value) return false;
     var trimmed = String(value).trim();
@@ -91,43 +106,97 @@
     }
   }
 
+  // Reveals sections as they scroll into view. Purely additive — CSS
+  // already collapses the transition to near-zero under
+  // prefers-reduced-motion, so this stays correct either way.
+  function initScrollReveal() {
+    var targets = document.querySelectorAll("[data-reveal]");
+    if (!("IntersectionObserver" in window) || !targets.length) {
+      targets.forEach(function (el) { el.classList.add("is-visible"); });
+      return;
+    }
+    var observer = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.2, rootMargin: "0px 0px -8% 0px" }
+    );
+    targets.forEach(function (el) { observer.observe(el); });
+  }
+
   function renderExperience(record) {
     document.title = (record.experience_name || "Big Sky Command™ Experience");
 
     applyBrandColors(record);
 
+    // --- Hero ---
     if (isUsable(record.logo_url)) {
       els.logo.src = record.logo_url;
       els.logo.alt = record.business_name || "";
       els.logo.hidden = false;
     }
 
-    els.headline.textContent = record.headline || "";
-    els.subheadline.textContent = record.subheadline || "";
-
-    if (isUsable(record.welcome_video_url)) {
-      els.video.src = record.welcome_video_url;
-      els.videoSection.hidden = false;
+    if (isUsable(record.business_name)) {
+      els.eyebrow.textContent = record.business_name;
+      els.eyebrow.hidden = false;
+    } else {
+      els.eyebrow.hidden = true;
     }
 
-    els.cta.textContent = record.call_to_action_text || "Get Started";
-    els.cta.addEventListener("click", function () {
-      if (!els.formSection.hidden) {
-        els.formSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    });
+    els.headline.textContent = record.headline || "";
+
+    if (isUsable(record.subheadline)) {
+      els.subheadline.textContent = record.subheadline;
+      els.subheadline.hidden = false;
+    } else {
+      els.subheadline.hidden = true;
+    }
+
+    // Computed once, reused anywhere copy needs to reference the business
+    // by name with a sensible fallback.
+    var businessLabel = isUsable(record.business_name) ? record.business_name : "your business";
+
+    // --- Welcome video: always shows something ---
+    if (isUsable(record.welcome_video_url)) {
+      els.video.src = record.welcome_video_url;
+      els.video.hidden = false;
+      els.videoPlaceholder.hidden = true;
+    } else {
+      els.video.hidden = true;
+      els.videoPlaceholder.hidden = false;
+      els.videoPlaceholderText.textContent = "A personal welcome from " + businessLabel + " is on its way.";
+    }
+
+    // --- Lead capture: always shows something ---
+    els.cta.textContent = record.call_to_action_text || "Let's Get Started";
 
     if (isUsable(record.ghl_form_embed)) {
       injectEmbedHtml(els.formEmbed, record.ghl_form_embed);
-      els.formSection.hidden = false;
+      els.formEmbed.hidden = false;
+      els.formPlaceholder.hidden = true;
+    } else {
+      els.formEmbed.hidden = true;
+      els.formPlaceholder.hidden = false;
     }
 
-    if (isUsable(record.thank_you_message)) {
-      els.thankYou.textContent = record.thank_you_message;
-      els.thankYouSection.hidden = false;
-    }
+    // --- AI Concierge: reserved, structural only, lightly personalized ---
+    els.aiCopy.textContent =
+      "We're building an AI Concierge to greet every visitor personally, " +
+      "answer questions about " + businessLabel + " in real time, and guide " +
+      "them straight to the next step. This space is reserved for it.";
+
+    // --- Thank you: always shows something ---
+    els.thankYou.textContent = isUsable(record.thank_you_message)
+      ? record.thank_you_message
+      : "Thanks for connecting with " + businessLabel + ". We received your information and will follow up personally.";
 
     showState("experience");
+    initScrollReveal();
   }
 
   async function loadExperience() {
