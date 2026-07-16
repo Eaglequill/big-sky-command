@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- Ensures every relative path on this page (styles.css, config.js,
+       app.js, experiences.json, etc.) always resolves to the site root —
+       not relative to /e/{ID} — since Experience URLs can be any depth. -->
+  <base href="/" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Big Sky Command™ — Experience</title>
   <meta name="robots" content="noindex" />
