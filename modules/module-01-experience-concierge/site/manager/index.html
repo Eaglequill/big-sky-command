@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <base href="/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Experience Manager — Big Sky Command™</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/manager/manager.css" />
+</head>
+<body>
+
+  <!-- ===================================================================
+       Big Sky Command™ — Experience Manager
+       Internal tool, for Big Sky Lead Partners staff only. Not part of
+       the public Experience Engine template. Gated by Supabase Auth —
+       nothing here renders until a session is confirmed. Clients are
+       never given access to this page (per the Client Access Rule).
+       =================================================================== -->
+
+  <div id="mgr-app">
+
+    <!-- Shown briefly on load while we check for an existing session -->
+    <div id="mgr-authcheck" class="mgr-screen">
+      <div class="mgr-spinner" aria-hidden="true"></div>
+      <p>Checking your session…</p>
+    </div>
+
+    <!-- Login gate -->
+    <div id="mgr-login" class="mgr-screen" hidden>
+      <form id="mgr-login-form" class="mgr-login-card" novalidate>
+        <p class="mgr-login-eyebrow">Big Sky Command™</p>
+        <h1>Experience Manager</h1>
+        <p class="mgr-login-sub">Sign in with your admin account to continue.</p>
+
+        <div id="mgr-login-error" class="mgr-alert mgr-alert-error" hidden role="alert"></div>
+
+        <label class="mgr-field">
+          <span>Email</span>
+          <input type="email" id="mgr-login-email" autocomplete="username" required />
+        </label>
+
+        <label class="mgr-field">
+          <span>Password</span>
+          <input type="password" id="mgr-login-password" autocomplete="current-password" required />
+        </label>
+
+        <button type="submit" id="mgr-login-submit" class="mgr-btn mgr-btn-primary mgr-btn-block">
+          Sign in
+        </button>
+      </form>
+    </div>
+
+    <!-- Authenticated shell -->
+    <div id="mgr-shell" class="mgr-shell" hidden>
+
+      <aside class="mgr-sidebar">
+        <div class="mgr-brand">
+          <p class="mgr-brand-eyebrow">Big Sky Command™</p>
+          <p class="mgr-brand-name">Experience Manager</p>
+        </div>
+        <nav class="mgr-nav">
+          <button type="button" class="mgr-nav-btn is-active" data-nav="dashboard">Dashboard</button>
+        </nav>
+        <div class="mgr-sidebar-footer">
+          <p id="mgr-user-email" class="mgr-user-email"></p>
+          <button type="button" id="mgr-signout" class="mgr-btn mgr-btn-ghost mgr-btn-block">Sign out</button>
+        </div>
+      </aside>
+
+      <main class="mgr-main">
+
+        <!-- Dashboard -->
+        <section id="mgr-view-dashboard" class="mgr-view">
+          <header class="mgr-view-header">
+            <div>
+              <h1>Experiences</h1>
+              <p class="mgr-view-sub">Every experience you've created, published or not.</p>
+            </div>
+            <button type="button" id="mgr-new-btn" class="mgr-btn mgr-btn-primary">+ New experience</button>
+          </header>
+
+          <div id="mgr-dashboard-error" class="mgr-alert mgr-alert-error" hidden role="alert"></div>
+          <div id="mgr-dashboard-loading" class="mgr-loading-row">
+            <div class="mgr-spinner" aria-hidden="true"></div>
+            <p>Loading experiences…</p>
+          </div>
+
+          <div id="mgr-dashboard-empty" class="mgr-empty" hidden>
+            <p>No experiences yet.</p>
+            <p class="mgr-empty-sub">Create your first one to get started.</p>
+          </div>
+
+          <div class="mgr-table-wrap" hidden id="mgr-table-wrap">
+            <table class="mgr-table">
+              <thead>
+                <tr>
+                  <th>Business</th>
+                  <th>Experience</th>
+                  <th>Experience ID</th>
+                  <th>Slug</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                  <th class="mgr-table-actions-col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="mgr-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Create / Edit wizard -->
+        <section id="mgr-view-form" class="mgr-view" hidden>
+          <header class="mgr-view-header">
+            <div>
+              <button type="button" id="mgr-back-btn" class="mgr-btn-link">← Back to dashboard</button>
+              <h1 id="mgr-form-title">New experience</h1>
+            </div>
+          </header>
+
+          <div id="mgr-form-error" class="mgr-alert mgr-alert-error" hidden role="alert"></div>
+          <div id="mgr-form-success" class="mgr-alert mgr-alert-success" hidden role="status"></div>
+
+          <div class="mgr-steps" role="tablist" aria-label="Experience setup steps">
+            <button type="button" class="mgr-step is-active" data-step="basics">1. Basics</button>
+            <button type="button" class="mgr-step" data-step="branding">2. Branding</button>
+            <button type="button" class="mgr-step" data-step="content">3. Content</button>
+            <button type="button" class="mgr-step" data-step="leadcapture">4. Lead capture &amp; AI</button>
+          </div>
+
+          <form id="mgr-experience-form" novalidate>
+
+            <!-- Step 1: Basics -->
+            <fieldset class="mgr-fieldset is-active" data-step-panel="basics">
+              <label class="mgr-field">
+                <span>Experience ID <em>required, e.g. BS000002</em></span>
+                <input type="text" id="f-experience-id" required />
+              </label>
+              <label class="mgr-field">
+                <span>Slug <em>optional — friendly URL at /experience/{slug}</em></span>
+                <input type="text" id="f-slug" placeholder="e.g. summit-photography" />
+              </label>
+              <label class="mgr-field">
+                <span>Business name <em>required</em></span>
+                <input type="text" id="f-business-name" required />
+              </label>
+              <label class="mgr-field">
+                <span>Experience name <em>required — internal label, also used as the page title</em></span>
+                <input type="text" id="f-experience-name" required />
+              </label>
+            </fieldset>
+
+            <!-- Step 2: Branding -->
+            <fieldset class="mgr-fieldset" data-step-panel="branding">
+              <label class="mgr-field">
+                <span>Logo URL <em>optional</em></span>
+                <input type="url" id="f-logo-url" placeholder="https://…" />
+              </label>
+              <div class="mgr-field-row">
+                <label class="mgr-field">
+                  <span>Primary color</span>
+                  <input type="color" id="f-primary-color" value="#1c2b3a" />
+                </label>
+                <label class="mgr-field">
+                  <span>Secondary color</span>
+                  <input type="color" id="f-secondary-color" value="#c99a3e" />
+                </label>
+              </div>
+
+              <div class="mgr-upload-field">
+                <span class="mgr-upload-label">Hero image <em>optional — max 10 MB</em></span>
+                <div id="hero-preview-wrap" class="mgr-upload-preview" hidden>
+                  <img id="hero-preview-img" alt="Current hero image" />
+                </div>
+                <input type="file" id="f-hero-file" accept="image/*" />
+                <div class="mgr-progress" id="hero-progress" hidden>
+                  <div class="mgr-progress-bar" id="hero-progress-bar"></div>
+                </div>
+                <p class="mgr-upload-status" id="hero-upload-status"></p>
+              </div>
+            </fieldset>
+
+            <!-- Step 3: Content -->
+            <fieldset class="mgr-fieldset" data-step-panel="content">
+              <label class="mgr-field">
+                <span>Headline</span>
+                <input type="text" id="f-headline" />
+              </label>
+              <label class="mgr-field">
+                <span>Subheadline</span>
+                <input type="text" id="f-subheadline" />
+              </label>
+
+              <div class="mgr-upload-field">
+                <span class="mgr-upload-label">Welcome video <em>optional — max 100 MB</em></span>
+                <div id="video-preview-wrap" class="mgr-upload-preview" hidden>
+                  <video id="video-preview-el" controls></video>
+                </div>
+                <input type="file" id="f-video-file" accept="video/*" />
+                <div class="mgr-progress" id="video-progress" hidden>
+                  <div class="mgr-progress-bar" id="video-progress-bar"></div>
+                </div>
+                <p class="mgr-upload-status" id="video-upload-status"></p>
+              </div>
+
+              <label class="mgr-field">
+                <span>Call to action text</span>
+                <input type="text" id="f-cta-text" placeholder="Let's Get Started" />
+              </label>
+              <label class="mgr-field">
+                <span>Thank you message</span>
+                <textarea id="f-thankyou" rows="3"></textarea>
+              </label>
+            </fieldset>
+
+            <!-- Step 4: Lead capture & AI -->
+            <fieldset class="mgr-fieldset" data-step-panel="leadcapture">
+              <label class="mgr-field">
+                <span>Lead capture embed <em>paste the GoHighLevel form embed code</em></span>
+                <textarea id="f-ghl-embed" rows="5"></textarea>
+              </label>
+              <label class="mgr-field">
+                <span>AI prompt <em>reserved for the upcoming AI Concierge module — not yet shown on the live page</em></span>
+                <textarea id="f-ai-prompt" rows="4"></textarea>
+              </label>
+              <label class="mgr-field">
+                <span>Calendar link <em>optional</em></span>
+                <input type="url" id="f-calendar-link" placeholder="https://…" />
+              </label>
+            </fieldset>
+
+          </form>
+
+          <div class="mgr-wizard-nav">
+            <button type="button" id="mgr-step-back" class="mgr-btn mgr-btn-ghost" disabled>Back</button>
+            <div class="mgr-wizard-nav-right">
+              <button type="button" id="mgr-save-draft" class="mgr-btn mgr-btn-ghost">Save as draft</button>
+              <button type="button" id="mgr-step-next" class="mgr-btn mgr-btn-primary">Next</button>
+              <button type="button" id="mgr-publish-btn" class="mgr-btn mgr-btn-publish" hidden>Publish</button>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/config.js"></script>
+  <script src="/data-provider.js"></script>
+  <script src="/manager/manager.js"></script>
+
+</body>
+</html>
