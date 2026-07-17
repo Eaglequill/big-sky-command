@@ -3,18 +3,21 @@
 //
 // This file is the ONE reusable engine. It contains no business-specific
 // text, colors, images, or embeds. Everything rendered comes from the
-// experience record matched by the Experience ID in the URL — this file
-// never knows or cares whether that record came from Supabase or a local
-// file. See data-provider.js for that decision.
+// experience record matched by the URL — this file never knows or cares
+// whether that record came from Supabase or a local file. See
+// data-provider.js for that decision.
 //
 // Flow:
-//   1. Read the Experience ID from the URL path (/e/{EXPERIENCE_ID}).
-//   2. Ask the data provider for an active record with that experience_id.
+//   1. Read an identifier from the URL: either an Experience ID from
+//      /e/{EXPERIENCE_ID} (original, still primary/required), or, if
+//      that's absent, a slug from /experience/{slug} (new, additive).
+//   2. Ask the data provider for an active record matching whichever
+//      identifier was found.
 //   3. Populate the template in index.html with that record's data.
 //   4. Play the shared Opening Sequence if one exists (see
 //      initIntroSequence below), then reveal the page.
-//   5. If no ID is present, or no active record matches, show the
-//      fallback message instead.
+//   5. If neither identifier is present, or no active record matches,
+//      show the fallback message instead.
 //
 // Journey this template renders, in fixed order (see index.html):
 //   Opening Sequence (reserved) → Hero → Welcome Video → Lead Capture →
@@ -73,6 +76,8 @@
 
   // Extracts the Experience ID from a path like "/e/BS000001" (with or
   // without a trailing slash, and regardless of hosting subpath).
+  // UNCHANGED from the original — this remains the primary, required
+  // route and is checked first in loadExperience() below.
   function getExperienceIdFromUrl() {
     var path = window.location.pathname;
     var match = path.match(/\/e\/([^/]+)\/?$/i);
@@ -84,6 +89,18 @@
     var params = new URLSearchParams(window.location.search);
     var fromQuery = params.get("e");
     return fromQuery ? fromQuery.trim() : null;
+  }
+
+  // NEW — additive. Extracts a slug from "/experience/{slug}". Only
+  // consulted when getExperienceIdFromUrl() above finds nothing, so this
+  // never interferes with an existing /e/{id} link.
+  function getExperienceSlugFromUrl() {
+    var path = window.location.pathname;
+    var match = path.match(/\/experience\/([^/]+)\/?$/i);
+    if (match && match[1]) {
+      return decodeURIComponent(match[1]);
+    }
+    return null;
   }
 
   // Injects raw HTML (e.g. a GHL form embed) and makes sure any <script>
@@ -109,6 +126,19 @@
     if (isUsable(record.secondary_color)) {
       root.style.setProperty("--exp-secondary", record.secondary_color.trim());
     }
+  }
+
+  // NEW — additive. Applies an optional hero background image on top of
+  // the existing .exp-hero-atmosphere element. Requires no HTML or CSS
+  // changes: if hero_image_url isn't set on the record, this is a no-op
+  // and the hero looks exactly as it does today for every existing
+  // client.
+  function applyHeroImage(record) {
+    var atmosphere = document.querySelector(".exp-hero-atmosphere");
+    if (!atmosphere || !isUsable(record.hero_image_url)) return;
+    atmosphere.style.backgroundImage = 'url("' + record.hero_image_url + '")';
+    atmosphere.style.backgroundSize = "cover";
+    atmosphere.style.backgroundPosition = "center";
   }
 
   // Reveals sections as they scroll into view. Purely additive — CSS
@@ -182,6 +212,7 @@
     document.title = (record.experience_name || "Big Sky Command™ Experience");
 
     applyBrandColors(record);
+    applyHeroImage(record); // NEW — additive, no-ops without hero_image_url
 
     // --- Hero: emotional hook only — no identity here on purpose ---
     els.headline.textContent = record.headline || "";
@@ -253,22 +284,27 @@
   }
 
   async function loadExperience() {
-    var experienceId = getExperienceIdFromUrl();
-
-    if (!experienceId) {
-      showState("notfound");
-      return;
-    }
-
     var config = window.BIG_SKY_CONFIG || {};
 
-    // The Experience Engine does not know or care whether records come
-    // from Supabase or a local file — it only asks the data provider.
-    // See data-provider.js for where that decision is actually made.
-    var { data, error } = await window.BigSkyDataProvider.getExperience(
-      experienceId,
-      config
-    );
+    // Primary, original route — checked first, exactly as before.
+    var experienceId = getExperienceIdFromUrl();
+    if (experienceId) {
+      var idResult = await window.BigSkyDataProvider.getExperience(experienceId, config);
+      return finishLoad(idResult);
+    }
+
+    // NEW — additive. Only reached if no /e/{id} or ?e= was present.
+    var slug = getExperienceSlugFromUrl();
+    if (slug) {
+      var slugResult = await window.BigSkyDataProvider.getExperienceBySlug(slug, config);
+      return finishLoad(slugResult);
+    }
+
+    showState("notfound");
+  }
+
+  function finishLoad(result) {
+    var data = result.data, error = result.error;
 
     if (error) {
       console.error("Big Sky Command: experience lookup failed.", error);

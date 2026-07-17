@@ -2,3 +2,17 @@
 # Netlify redirect rule: routes any /e/{Experience ID} path to index.html
 # so app.js can read the ID from the URL. Only used if deploying to Netlify.
 /e/*  /index.html  200
+
+# Big Sky Command™ — Experience Engine (additive)
+# Routes any /experience/{slug} path to the same index.html / Experience
+# Engine template. Does not affect the /e/* rule above in any way — both
+# routes are live at the same time.
+/experience/*  /index.html  200
+
+# Big Sky Command™ — Experience Manager (additive)
+# Serves the Manager's single-page app for any path under /manager, so
+# client-side routing inside the Manager (login, dashboard, edit, etc.)
+# works on refresh and on direct links. Actual static files under
+# /manager/ (manager.js, manager.css) are served directly by Netlify and
+# never reach this rule — it only applies when no matching file exists.
+/manager/*  /manager/index.html  200
