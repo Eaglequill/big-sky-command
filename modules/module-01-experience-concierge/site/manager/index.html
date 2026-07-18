@@ -248,7 +248,36 @@
     </div>
   </div>
 
+  <!-- Big Sky Scan™ QR modal — shared by "auto-created on publish" and
+       the dashboard's manual "QR" action. Placed before the scripts
+       below: manager.js attaches its event listeners immediately when
+       it runs, not on DOMContentLoaded, so these elements must already
+       exist in the DOM by then. -->
+  <div id="mgr-qr-modal" class="mgr-modal-backdrop" hidden>
+    <div class="mgr-modal" role="dialog" aria-labelledby="mgr-qr-title">
+      <button type="button" id="mgr-qr-close" class="mgr-modal-close" aria-label="Close">&times;</button>
+      <p class="mgr-login-eyebrow">Big Sky Scan™</p>
+      <h1 id="mgr-qr-title">Permanent QR Code</h1>
+      <p class="mgr-login-sub" id="mgr-qr-label"></p>
+
+      <div id="mgr-qr-image" class="mgr-qr-image"></div>
+
+      <label class="mgr-field">
+        <span>Scan URL <em>this never changes, even if the destination does</em></span>
+        <input type="text" id="mgr-qr-url" readonly />
+      </label>
+
+      <div class="mgr-qr-actions">
+        <button type="button" id="mgr-qr-download" class="mgr-btn mgr-btn-primary">Download QR</button>
+        <a id="mgr-qr-test" class="mgr-btn mgr-btn-ghost" target="_blank" rel="noopener">Test QR</a>
+        <button type="button" id="mgr-qr-copy" class="mgr-btn mgr-btn-ghost">Copy link</button>
+      </div>
+      <p class="mgr-upload-status" id="mgr-qr-copy-status"></p>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="/config.js"></script>
   <script src="/data-provider.js"></script>
   <script src="/manager/manager.js"></script>

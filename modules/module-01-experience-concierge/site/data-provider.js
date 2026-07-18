@@ -405,6 +405,110 @@ window.BigSkyDataProvider = (function () {
     return uploadToStorage(folderKey + "/video", file, MAX_VIDEO_BYTES, "100 MB", onProgress, config);
   }
 
+  // =====================================================================
+  // Big Sky Scan™ additions (04_scan_architecture.sql). Nothing above
+  // this line is changed by these additions.
+  // =====================================================================
+
+  // Public. Calls the approved resolve_scan() function, which looks up
+  // the destination, records the scan event server-side (salted IP
+  // hash, never client-computed — see SCAN_ARCHITECTURE.md), and
+  // returns only what's needed to redirect. Used by the /scan/{code}
+  // route in app.js.
+  async function resolveScan(scanCode, userAgent, referrer, sessionId, config) {
+    config = resolveConfig(config);
+    var guardErr = requireSupabaseMode(config);
+    if (guardErr) return { data: null, error: guardErr };
+
+    var client = getClient(config);
+    var result = await client.rpc("resolve_scan", {
+      p_scan_code: scanCode,
+      p_user_agent: userAgent || null,
+      p_referrer: referrer || null,
+      p_session_id: sessionId || null
+    });
+
+    if (result.error) return { data: null, error: result.error };
+    // .rpc() on a function returning `table(...)` gives back an array;
+    // resolve_scan() always returns exactly one row.
+    var row = Array.isArray(result.data) ? result.data[0] : result.data;
+    return { data: row || null, error: null };
+  }
+
+  function generateScanCode() {
+    // 10-character random alphanumeric — short enough for a clean QR
+    // and URL, long enough to not be casually guessable. Uniqueness is
+    // enforced by the database's unique constraint on scan_code; a
+    // collision here would surface as an insert error, vanishingly
+    // unlikely at Phase 1 volume.
+    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I ambiguity
+    var out = "";
+    for (var i = 0; i < 10; i++) {
+      out += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return out;
+  }
+
+  // Admin/Studio only (relies on the authenticated RLS policies on
+  // scan_destinations). Looks for an existing scan_destinations row
+  // pointed at this experience; creates one if none exists. This is
+  // what makes "Publish → Permanent Big Sky Scan™ created
+  // automatically" true — called once, right after a successful
+  // publish.
+  async function ensureScanDestination(experienceRecord, config) {
+    config = resolveConfig(config);
+    var guardErr = requireSupabaseMode(config);
+    if (guardErr) return { data: null, error: guardErr };
+
+    var client = getClient(config);
+
+    var existing = await client
+      .from("scan_destinations")
+      .select("*")
+      .eq("destination_experience_id", experienceRecord.id)
+      .eq("destination_type", "experience")
+      .limit(1)
+      .maybeSingle();
+
+    if (existing.error) return { data: null, error: existing.error };
+    if (existing.data) return { data: existing.data, error: null };
+
+    var insertResult = await client
+      .from("scan_destinations")
+      .insert({
+        scan_code: generateScanCode(),
+        label: (experienceRecord.experience_name || experienceRecord.experience_id) + " — Primary QR",
+        business_name: experienceRecord.business_name || null,
+        destination_type: "experience",
+        destination_experience_id: experienceRecord.id,
+        active: true
+      })
+      .select()
+      .single();
+
+    return { data: insertResult.data, error: insertResult.error };
+  }
+
+  // Admin/Studio only. For the dashboard's "View / Test / Download QR"
+  // action — looks up the existing scan destination for an experience
+  // without creating one (use ensureScanDestination for that).
+  async function getScanDestinationForExperience(experienceRecordId, config) {
+    config = resolveConfig(config);
+    var guardErr = requireSupabaseMode(config);
+    if (guardErr) return { data: null, error: guardErr };
+
+    var client = getClient(config);
+    var result = await client
+      .from("scan_destinations")
+      .select("*")
+      .eq("destination_experience_id", experienceRecordId)
+      .eq("destination_type", "experience")
+      .limit(1)
+      .maybeSingle();
+
+    return { data: result.data, error: result.error };
+  }
+
   return {
     // Original — unchanged
     getExperience: getExperience,
@@ -427,6 +531,11 @@ window.BigSkyDataProvider = (function () {
 
     // Storage
     uploadHeroImage: uploadHeroImage,
-    uploadWelcomeVideo: uploadWelcomeVideo
+    uploadWelcomeVideo: uploadWelcomeVideo,
+
+    // Big Sky Scan™
+    resolveScan: resolveScan,
+    ensureScanDestination: ensureScanDestination,
+    getScanDestinationForExperience: getScanDestinationForExperience
   };
 })();

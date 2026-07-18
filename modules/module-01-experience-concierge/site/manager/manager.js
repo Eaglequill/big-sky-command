@@ -251,6 +251,13 @@
     toggleBtn.addEventListener("click", function () { togglePublish(record, toggleBtn); });
     actionsCell.appendChild(toggleBtn);
 
+    var qrBtn = document.createElement("button");
+    qrBtn.type = "button";
+    qrBtn.className = "mgr-btn mgr-btn-ghost mgr-btn-small";
+    qrBtn.textContent = "QR";
+    qrBtn.addEventListener("click", function () { openQrForExperience(record); });
+    actionsCell.appendChild(qrBtn);
+
     var viewIdLink = document.createElement("a");
     viewIdLink.href = "/e/" + encodeURIComponent(record.experience_id);
     viewIdLink.target = "_blank";
@@ -476,6 +483,10 @@
 
     showFormSuccess(status === "active" ? "Published." : "Saved as draft.");
     loadDashboard();
+
+    if (status === "active") {
+      createScanDestinationAfterPublish(result.data);
+    }
   }
 
   $("mgr-save-draft").addEventListener("click", function () { handleSave("inactive"); });
@@ -569,6 +580,102 @@
     statusEl.textContent = "Uploaded.";
     statusEl.className = "mgr-upload-status is-success";
   });
+
+  // -----------------------------------------------------------------
+  // Big Sky Scan™ — QR modal
+  // -----------------------------------------------------------------
+
+  var qrCodeInstance = null;
+
+  function scanUrlFor(scanCode) {
+    return window.location.origin + "/scan/" + encodeURIComponent(scanCode);
+  }
+
+  function renderQrModal(scanDestination, experienceLabel) {
+    var url = scanUrlFor(scanDestination.scan_code);
+
+    $("mgr-qr-label").textContent = experienceLabel || scanDestination.label || "";
+    $("mgr-qr-url").value = url;
+    $("mgr-qr-test").href = url;
+    $("mgr-qr-copy-status").textContent = "";
+
+    var imageContainer = $("mgr-qr-image");
+    imageContainer.innerHTML = "";
+    // QRCode.js draws into the container synchronously.
+    qrCodeInstance = new QRCode(imageContainer, {
+      text: url,
+      width: 240,
+      height: 240,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    show($("mgr-qr-modal"));
+  }
+
+  function closeQrModal() {
+    hide($("mgr-qr-modal"));
+  }
+
+  $("mgr-qr-close").addEventListener("click", closeQrModal);
+  $("mgr-qr-modal").addEventListener("click", function (e) {
+    if (e.target === $("mgr-qr-modal")) closeQrModal(); // click outside the card
+  });
+
+  $("mgr-qr-download").addEventListener("click", function () {
+    var container = $("mgr-qr-image");
+    var canvas = container.querySelector("canvas");
+    if (!canvas) return; // QRCode.js always uses canvas in modern browsers
+    var link = document.createElement("a");
+    link.download = "big-sky-scan-qr.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  });
+
+  $("mgr-qr-copy").addEventListener("click", async function () {
+    var statusEl = $("mgr-qr-copy-status");
+    try {
+      await navigator.clipboard.writeText($("mgr-qr-url").value);
+      statusEl.textContent = "Copied.";
+      statusEl.className = "mgr-upload-status is-success";
+    } catch (e) {
+      statusEl.textContent = "Couldn't copy automatically — select and copy the URL above.";
+      statusEl.className = "mgr-upload-status is-error";
+    }
+  });
+
+  // Dashboard "QR" button — finds or creates the scan destination for
+  // this experience, then shows it. Uses ensureScanDestination so this
+  // also works as a safety net for any experience published before
+  // this feature existed.
+  async function openQrForExperience(record) {
+    var result = await DP.ensureScanDestination(record, CONFIG);
+    if (result.error) {
+      var errorEl = $("mgr-dashboard-error");
+      errorEl.textContent = friendlyError(result.error);
+      show(errorEl);
+      return;
+    }
+    renderQrModal(result.data, record.experience_name || record.business_name);
+  }
+
+  // Called right after a successful Publish (see handleSave) — this is
+  // what makes "Publish → Permanent Big Sky Scan™ created automatically"
+  // true. Failure here is shown but does not undo the publish — the
+  // experience is still correctly published either way; the QR can
+  // always be created afterward via the dashboard's QR button.
+  async function createScanDestinationAfterPublish(record) {
+    var result = await DP.ensureScanDestination(record, CONFIG);
+    if (result.error) {
+      showFormError(
+        "Published, but the permanent QR couldn't be created automatically (" +
+        friendlyError(result.error) +
+        "). You can create it from the dashboard's QR button."
+      );
+      return;
+    }
+    renderQrModal(result.data, record.experience_name || record.business_name);
+  }
+
 
   // -----------------------------------------------------------------
   // Go

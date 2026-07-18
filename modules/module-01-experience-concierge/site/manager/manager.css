@@ -529,9 +529,77 @@ h1, h2 {
 }
 
 /* ---------------------------------------------------------------------
+   Big Sky Scan™ QR modal
+   --------------------------------------------------------------------- */
+
+.mgr-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 22, 28, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.mgr-modal {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: var(--mgr-paper-raised);
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 24px 48px -20px rgba(18, 22, 28, 0.4);
+  text-align: center;
+}
+
+.mgr-modal h1 { font-size: 22px; margin-bottom: 4px; }
+
+.mgr-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--mgr-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.mgr-modal-close:hover { color: var(--mgr-ink); }
+
+.mgr-qr-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px auto;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--mgr-line);
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.mgr-modal .mgr-field { text-align: left; }
+
+.mgr-qr-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Reduced motion: no animation is used for the QR modal itself, so
+   nothing additional needed there. */
+
+/* ---------------------------------------------------------------------
    Reduced motion
    --------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .mgr-spinner { animation: none; border-top-color: var(--mgr-line); }
   .mgr-progress-bar { transition: none; }
 }
+

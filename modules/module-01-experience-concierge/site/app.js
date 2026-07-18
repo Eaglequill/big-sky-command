@@ -283,6 +283,72 @@
       : "Thanks for connecting with " + businessLabel + ". We received your information and will follow up personally.";
   }
 
+  // NEW — additive. Extracts a scan code from "/scan/{code}". Only
+  // consulted when neither an /e/{id} nor an /experience/{slug} was
+  // found — this route resolves and redirects, it never renders the
+  // Experience Engine template itself.
+  function getScanCodeFromUrl() {
+    var path = window.location.pathname;
+    var match = path.match(/\/scan\/([^/]+)\/?$/i);
+    if (match && match[1]) {
+      return decodeURIComponent(match[1]);
+    }
+    return null;
+  }
+
+  // A lightweight, non-identifying session marker — generated per
+  // browser tab, kept only in memory (not a cookie, not localStorage).
+  // Used alongside the server-side IP hash, per the approved IP-handling
+  // requirements ("continue using a session identifier... since the IP
+  // hash should not be treated as a perfect unique-person identifier").
+  var scanSessionId = null;
+  function getScanSessionId() {
+    if (!scanSessionId) {
+      scanSessionId = "s_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+    }
+    return scanSessionId;
+  }
+
+  async function resolveAndRedirectScan(scanCode, config) {
+    var result = await window.BigSkyDataProvider.resolveScan(
+      scanCode,
+      navigator.userAgent,
+      document.referrer,
+      getScanSessionId(),
+      config
+    );
+
+    if (result.error || !result.data || !result.data.found || !result.data.active) {
+      showState("notfound");
+      return;
+    }
+
+    var destination = result.data;
+
+    if (destination.destination_type === "url" && destination.destination_url) {
+      window.location.replace(destination.destination_url);
+      return;
+    }
+
+    if (destination.destination_type === "experience" && destination.destination_experience_id) {
+      var expResult = await window.BigSkyDataProvider.getExperienceByRecordId(
+        destination.destination_experience_id,
+        config
+      );
+      if (expResult.error || !expResult.data) {
+        showState("notfound");
+        return;
+      }
+      window.location.replace("/e/" + encodeURIComponent(expResult.data.experience_id));
+      return;
+    }
+
+    // Destination type not recognized by this version of the engine
+    // (e.g. a future type not yet supported here) — fail safe.
+    showState("notfound");
+  }
+
+
   async function loadExperience() {
     var config = window.BIG_SKY_CONFIG || {};
 
@@ -293,11 +359,18 @@
       return finishLoad(idResult);
     }
 
-    // NEW — additive. Only reached if no /e/{id} or ?e= was present.
+    // Additive. Only reached if no /e/{id} or ?e= was present.
     var slug = getExperienceSlugFromUrl();
     if (slug) {
       var slugResult = await window.BigSkyDataProvider.getExperienceBySlug(slug, config);
       return finishLoad(slugResult);
+    }
+
+    // Additive. Only reached if neither of the above matched. Resolves
+    // and redirects; never renders the template itself.
+    var scanCode = getScanCodeFromUrl();
+    if (scanCode) {
+      return resolveAndRedirectScan(scanCode, config);
     }
 
     showState("notfound");

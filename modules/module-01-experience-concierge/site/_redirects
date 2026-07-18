@@ -9,6 +9,12 @@
 # routes are live at the same time.
 /experience/*  /index.html  200
 
+# Big Sky Command™ — Big Sky Scan™ (additive)
+# Routes any /scan/{code} path to the same index.html — app.js resolves
+# the permanent scan code and redirects the visitor. Does not affect
+# any rule above.
+/scan/*  /index.html  200
+
 # Big Sky Command™ — Experience Manager (additive)
 # Serves the Manager's single-page app for any path under /manager, so
 # client-side routing inside the Manager (login, dashboard, edit, etc.)
