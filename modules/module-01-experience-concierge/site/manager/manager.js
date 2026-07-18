@@ -116,9 +116,13 @@
     DP.onAuthStateChange(function (event, session) {
       if (event === "SIGNED_OUT") {
         showLogin();
-      } else if (event === "SIGNED_IN" && session) {
-        showShell(session);
       }
+      // Deliberately not handling "SIGNED_IN" here — the login form's
+      // submit handler and the getSession() check above already call
+      // showShell() for the two cases that matter (fresh sign-in, and
+      // page load with an existing session). Also reacting to SIGNED_IN
+      // here caused loadDashboard() to run twice concurrently, producing
+      // duplicate rows and a loading spinner that never cleared.
     }, CONFIG);
   }
 
@@ -176,7 +180,12 @@
   // Dashboard
   // -----------------------------------------------------------------
 
+  var dashboardLoadInFlight = false;
+
   async function loadDashboard() {
+    if (dashboardLoadInFlight) return;
+    dashboardLoadInFlight = true;
+
     var errorEl = $("mgr-dashboard-error");
     var loadingEl = $("mgr-dashboard-loading");
     var emptyEl = $("mgr-dashboard-empty");
@@ -191,6 +200,7 @@
 
     var result = await DP.listExperiences(CONFIG);
     hide(loadingEl);
+    dashboardLoadInFlight = false;
 
     if (result.error) {
       errorEl.textContent = friendlyError(result.error);
