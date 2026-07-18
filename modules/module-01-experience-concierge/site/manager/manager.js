@@ -599,15 +599,17 @@
 
     var imageContainer = $("mgr-qr-image");
     imageContainer.innerHTML = "";
-    var canvas = document.createElement("canvas");
-    imageContainer.appendChild(canvas);
 
-    QRCode.toCanvas(canvas, url, { width: 240, margin: 1 }, function (err) {
-      if (err) {
-        imageContainer.textContent = "Couldn't generate the QR image.";
-        console.error("Big Sky Scan: QR render failed.", err);
-      }
-    });
+    if (typeof QRCode === "undefined") {
+      imageContainer.textContent = "QR library failed to load — check your connection and try again.";
+    } else {
+      new QRCode(imageContainer, {
+        text: url,
+        width: 240,
+        height: 240,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
 
     show($("mgr-qr-modal"));
   }
