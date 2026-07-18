@@ -585,8 +585,6 @@
   // Big Sky Scan™ — QR modal
   // -----------------------------------------------------------------
 
-  var qrCodeInstance = null;
-
   function scanUrlFor(scanCode) {
     return window.location.origin + "/scan/" + encodeURIComponent(scanCode);
   }
@@ -601,12 +599,14 @@
 
     var imageContainer = $("mgr-qr-image");
     imageContainer.innerHTML = "";
-    // QRCode.js draws into the container synchronously.
-    qrCodeInstance = new QRCode(imageContainer, {
-      text: url,
-      width: 240,
-      height: 240,
-      correctLevel: QRCode.CorrectLevel.M
+    var canvas = document.createElement("canvas");
+    imageContainer.appendChild(canvas);
+
+    QRCode.toCanvas(canvas, url, { width: 240, margin: 1 }, function (err) {
+      if (err) {
+        imageContainer.textContent = "Couldn't generate the QR image.";
+        console.error("Big Sky Scan: QR render failed.", err);
+      }
     });
 
     show($("mgr-qr-modal"));
@@ -624,7 +624,7 @@
   $("mgr-qr-download").addEventListener("click", function () {
     var container = $("mgr-qr-image");
     var canvas = container.querySelector("canvas");
-    if (!canvas) return; // QRCode.js always uses canvas in modern browsers
+    if (!canvas) return; // the canvas we created and passed to QRCode.toCanvas()
     var link = document.createElement("a");
     link.download = "big-sky-scan-qr.png";
     link.href = canvas.toDataURL("image/png");
