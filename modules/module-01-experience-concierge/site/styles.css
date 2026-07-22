@@ -341,6 +341,45 @@ p { margin: 0; }
   cursor: pointer;
 }
 
+/* ---------------- Act II: The Turn — cards ---------------- */
+/* Reuses the same frosted-glass treatment already established for
+   lead capture (.exp-form-panel) rather than inventing a new surface
+   for this moment — each card is a quiet, bordered row, not a filled
+   button, consistent with the restraint established at the Threshold. */
+
+.exp-the-turn-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: var(--exp-max-width);
+}
+
+.exp-the-turn-card {
+  font-family: var(--exp-font-body);
+  font-size: 0.98rem;
+  text-align: left;
+  color: var(--exp-ink);
+  background: var(--exp-glass);
+  border: 1px solid var(--exp-glass-border);
+  border-radius: var(--exp-radius);
+  padding: 16px 20px;
+  cursor: pointer;
+}
+
+.exp-the-turn-card:hover {
+  border-color: var(--exp-secondary);
+}
+
+.exp-the-turn-continue {
+  background: transparent;
+  border: none;
+  color: var(--exp-ink-muted);
+  font-family: var(--exp-font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 /* Reusable utility — applies the EXISTING exp-focus-in keyframe
    (defined below, under Hero) to any element, not just the headline.
    The keyframe itself is not duplicated; this is the one new selector

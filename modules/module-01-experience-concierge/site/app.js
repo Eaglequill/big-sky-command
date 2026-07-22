@@ -44,6 +44,11 @@
     signatureEntryCta: document.getElementById("exp-signature-entry-cta"),
     signatureEntrySkip: document.getElementById("exp-signature-entry-skip"),
 
+    theTurn: document.getElementById("exp-the-turn"),
+    theTurnText: document.getElementById("exp-the-turn-text"),
+    theTurnCards: document.getElementById("exp-the-turn-cards"),
+    theTurnContinue: document.getElementById("exp-the-turn-continue"),
+
     headline: document.getElementById("exp-headline"),
     subheadline: document.getElementById("exp-subheadline"),
     eyebrow: document.getElementById("exp-eyebrow"),
@@ -69,11 +74,20 @@
   // record) — an ordinary, expected result, never treated as a failure.
   // loadfailed means the request itself didn't complete — a timeout, a
   // rejected promise, or an unexpected exception. See startExperienceLoad().
+  //
+  // showState() is the ONLY place any top-level visual state is ever
+  // toggled — no component manages its own `hidden` attribute directly.
+  // This is a direct, deliberate lesson from the Act I containment bug:
+  // an element nested inside another hidden container, or hidden
+  // outside this function, can become invisible in a way nothing else
+  // in the codebase can reason about or fix. Every new state added to
+  // this template must be registered here.
   function showState(name) {
     els.loading.hidden = name !== "loading";
     els.notFound.hidden = name !== "notfound";
     if (els.loadFailed) els.loadFailed.hidden = name !== "loadfailed";
     if (els.signatureEntry) els.signatureEntry.hidden = name !== "signatureentry";
+    if (els.theTurn) els.theTurn.hidden = name !== "theturn";
     els.experience.hidden = name !== "experience";
   }
 
@@ -370,6 +384,131 @@
     // behind whatever state was active before.
     showState("signatureentry");
     playScene(0);
+  }
+
+  // =====================================================================
+  // Act II — "The Turn". Reusable Experience Engine component: a paced,
+  // staged reveal (reuses the exact scene mechanism from Signature
+  // Entry — same shape, same motion device, same reduced-motion
+  // handling), followed by a staggered set of promise cards the visitor
+  // taps to select. Contains no business-specific text of its own —
+  // content comes entirely from window.BigSkyTheTurnAdapter.getConfig().
+  // See the-turn-adapter.js for today's temporary configuration source.
+  //
+  // next(selectedCardId) — selectedCardId is the tapped card's id, or
+  // null if the visitor used the Continue fallback, or null if Act II
+  // isn't configured at all. Carried forward for a future Act III to
+  // read; not persisted anywhere, since nothing about this journey
+  // reloads the page between acts.
+  // =====================================================================
+  var theTurnTimers = [];
+  var theTurnActiveFinish = null; // set only while an Act II sequence is actually running
+
+  function clearTheTurnTimers() {
+    theTurnTimers.forEach(function (t) { window.clearTimeout(t); });
+    theTurnTimers = [];
+  }
+
+  function initTheTurn(record, next) {
+    var config = (window.BigSkyTheTurnAdapter &&
+      window.BigSkyTheTurnAdapter.getConfig(record)) || { enabled: false };
+
+    if (!config.enabled || !config.scenes || !config.scenes.length) {
+      next(null);
+      return;
+    }
+
+    var el = els.theTurn;
+    var textEl = els.theTurnText;
+    var cardsEl = els.theTurnCards;
+    var continueEl = els.theTurnContinue;
+
+    if (!el || !textEl || !cardsEl) {
+      next(null);
+      return;
+    }
+
+    clearTheTurnTimers();
+
+    var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var scenes = config.scenes.slice();
+    var settled = false;
+
+    function finish(selectedCardId) {
+      if (settled) return;
+      settled = true;
+      clearTheTurnTimers();
+      theTurnActiveFinish = null;
+      next(selectedCardId || null);
+    }
+
+    function playScene(index) {
+      if (index >= scenes.length) {
+        showCards();
+        return;
+      }
+      var scene = scenes[index];
+      textEl.textContent = scene.text || "";
+      textEl.hidden = false;
+      textEl.classList.remove("exp-focus-in-el", "exp-signature-entry-exit");
+      void textEl.offsetWidth;
+      textEl.classList.add("exp-focus-in-el");
+
+      var holdMs = scene.holdMs || 2500;
+      var exitMs = reducedMotion ? 0 : (scene.exitMs || 500);
+
+      theTurnTimers.push(window.setTimeout(function () {
+        textEl.classList.add("exp-signature-entry-exit");
+        theTurnTimers.push(window.setTimeout(function () {
+          playScene(index + 1);
+        }, exitMs));
+      }, holdMs));
+    }
+
+    // Cards are built fresh every call and torn down via innerHTML — no
+    // listener-deduplication logic needed here the way Signature
+    // Entry's static CTA button required, since old buttons (and their
+    // listeners) are simply discarded with the DOM nodes that held them.
+    function showCards() {
+      textEl.hidden = true;
+      cardsEl.innerHTML = "";
+      cardsEl.hidden = false;
+
+      (config.cards || []).forEach(function (card, i) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "exp-the-turn-card";
+        btn.textContent = card.text || "";
+        btn.addEventListener("click", function () { finish(card.id || null); });
+        cardsEl.appendChild(btn);
+
+        var delay = reducedMotion ? 0 : i * 120; // staggered, not simultaneous
+        theTurnTimers.push(window.setTimeout(function () {
+          btn.classList.add("exp-focus-in-el");
+        }, delay));
+      });
+
+      if (continueEl && config.continueFallback) {
+        continueEl.hidden = true;
+        var appearAfterMs = reducedMotion ? 0 : (config.continueFallback.appearAfterMs || 4000);
+        theTurnTimers.push(window.setTimeout(function () {
+          continueEl.hidden = false;
+        }, appearAfterMs));
+      }
+    }
+
+    theTurnActiveFinish = finish;
+    showState("theturn");
+    playScene(0);
+  }
+
+  // Attached once, ever — same lesson as Signature Entry's CTA/skip
+  // listeners: this is a static, reused button, so it must never be
+  // re-attached on every initTheTurn() call.
+  if (els.theTurnContinue) {
+    els.theTurnContinue.addEventListener("click", function () {
+      if (theTurnActiveFinish) theTurnActiveFinish(null);
+    });
   }
 
   function renderExperience(record) {
@@ -699,8 +838,12 @@
     loadAndRenderSections(data); // additive, fire-and-forget — see comment above the function itself
     initSignatureEntry(data, function () {
       if (attempt !== currentLoadAttempt) return; // same stale-result guard, for the async completion callback
-      showState("experience");
-      initScrollReveal();
+      initTheTurn(data, function (selectedCardId) {
+        if (attempt !== currentLoadAttempt) return; // same guard, applied at every async handoff between acts
+        theTurnSelectedCardId = selectedCardId; // module-level — ready for a future Act III to read
+        showState("experience");
+        initScrollReveal();
+      });
     });
   }
 
@@ -716,12 +859,14 @@
   // =====================================================================
   var loadInProgress = false;
   var currentLoadAttempt = 0; // incremented per attempt; see the stale-result guard in finishLoad()
+  var theTurnSelectedCardId = null; // set by Act II, ready for Act III to read; no persistence — nothing here reloads the page
 
   async function startExperienceLoad() {
     if (loadInProgress) return; // ignores rapid repeated Retry clicks
     loadInProgress = true;
     var attempt = ++currentLoadAttempt;
     clearSignatureEntryTimers(); // defensive — cancels anything left over from a prior attempt
+    clearTheTurnTimers(); // same defensive cleanup, for Act II
     showState("loading");
     try {
       await loadExperience(attempt);

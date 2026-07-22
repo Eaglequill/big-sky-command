@@ -103,6 +103,25 @@
     <button id="exp-signature-entry-skip" class="exp-signature-entry-skip" type="button" hidden>Skip</button>
   </div>
 
+  <!-- ACT II — "THE TURN" — reusable component (see initTheTurn() in
+       app.js). Sibling of the other top-level states, NOT nested inside
+       <main id="experience"> — applying the containment lesson learned
+       building Act I directly, rather than repeating it. Reuses
+       exp-signature-entry's atmosphere and text classes rather than
+       duplicating them, so this reads as the same film continuing, not
+       a new page. Configuration comes from
+       window.BigSkyTheTurnAdapter.getConfig(record) — see
+       the-turn-adapter.js for the same temporary, pending-migration
+       pattern already used for Act I. { enabled: false } (the default
+       for any experience without one configured) is a complete,
+       silent no-op. -->
+  <div id="exp-the-turn" class="exp-signature-entry" hidden>
+    <div class="exp-signature-entry-atmosphere" aria-hidden="true"></div>
+    <p id="exp-the-turn-text" class="exp-signature-entry-text"></p>
+    <div id="exp-the-turn-cards" class="exp-the-turn-cards" hidden></div>
+    <button id="exp-the-turn-continue" class="exp-the-turn-continue" type="button" hidden>Continue</button>
+  </div>
+
   <!-- Experience template: populated entirely from the database record -->
   <main id="experience" class="experience" hidden>
 
@@ -227,6 +246,10 @@
        file's own header comment. Provides window.BigSkySignatureEntryAdapter
        for the reusable Signature Entry component in app.js. -->
   <script src="signature-entry-adapter.js"></script>
+  <!-- TEMPORARY — pending migration into experience_sections. See this
+       file's own header comment. Provides window.BigSkyTheTurnAdapter
+       for the reusable Act II ("The Turn") component in app.js. -->
+  <script src="the-turn-adapter.js"></script>
   <!-- Experience Engine logic -->
   <script src="app.js"></script>
 
