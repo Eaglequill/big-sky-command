@@ -380,6 +380,89 @@ p { margin: 0; }
   cursor: pointer;
 }
 
+/* ---------------- Act III: The Vision — name and promise inputs ---------------- */
+/* Reuses the same frosted-glass surface as the lead-capture form
+   (.exp-form-panel) and Act II's cards, rather than a third distinct
+   input treatment — one visual language for "this is a place you can
+   put something," used consistently. */
+
+.exp-the-vision-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: var(--exp-max-width);
+}
+
+.exp-the-vision-prompt {
+  margin: 0;
+  font-family: var(--exp-font-display);
+  font-style: italic;
+  font-size: clamp(1.15rem, 3.6vw, 1.4rem);
+  color: var(--exp-ink);
+  text-align: center;
+}
+
+.exp-the-vision-input {
+  width: 100%;
+  font-family: var(--exp-font-body);
+  font-size: 1rem;
+  color: var(--exp-ink);
+  background: var(--exp-glass);
+  border: 1px solid var(--exp-glass-border);
+  border-radius: var(--exp-radius);
+  padding: 14px 18px;
+  text-align: center;
+}
+
+.exp-the-vision-input::placeholder {
+  color: var(--exp-ink-muted);
+}
+
+.exp-the-vision-input:focus {
+  outline: none;
+  border-color: var(--exp-secondary);
+}
+
+.exp-the-vision-step-actions {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+/* The name reveal reuses the exact Hero headline treatment
+   (--exp-font-display, the same weight/scale register) — the whole
+   point is that the visitor's own name gets the same visual weight
+   Big Sky's own name has elsewhere in this template. The promise
+   reveal sits beneath it in a quieter register, matching the locked
+   script in docs/14: identity first and largest, intention after and
+   smaller. */
+.exp-the-vision-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.exp-the-vision-reveal-name {
+  margin: 0;
+  font-family: var(--exp-font-display);
+  font-weight: 500;
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+  color: var(--exp-ink);
+}
+
+.exp-the-vision-reveal-promise {
+  margin: 0;
+  font-family: var(--exp-font-display);
+  font-style: italic;
+  font-size: clamp(1.05rem, 3.4vw, 1.3rem);
+  color: var(--exp-ink-muted);
+  max-width: 36ch;
+}
+
 /* Reusable utility — applies the EXISTING exp-focus-in keyframe
    (defined below, under Hero) to any element, not just the headline.
    The keyframe itself is not duplicated; this is the one new selector

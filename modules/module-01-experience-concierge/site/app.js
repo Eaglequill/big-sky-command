@@ -49,6 +49,20 @@
     theTurnCards: document.getElementById("exp-the-turn-cards"),
     theTurnContinue: document.getElementById("exp-the-turn-continue"),
 
+    theVision: document.getElementById("exp-the-vision"),
+    theVisionText: document.getElementById("exp-the-vision-text"),
+    theVisionNameStep: document.getElementById("exp-the-vision-name-step"),
+    theVisionNameInput: document.getElementById("exp-the-vision-name-input"),
+    theVisionNameSubmit: document.getElementById("exp-the-vision-name-submit"),
+    theVisionNameSkip: document.getElementById("exp-the-vision-name-skip"),
+    theVisionPromiseStep: document.getElementById("exp-the-vision-promise-step"),
+    theVisionPromiseInput: document.getElementById("exp-the-vision-promise-input"),
+    theVisionPromiseSubmit: document.getElementById("exp-the-vision-promise-submit"),
+    theVisionPromiseSkip: document.getElementById("exp-the-vision-promise-skip"),
+    theVisionReveal: document.getElementById("exp-the-vision-reveal"),
+    theVisionRevealName: document.getElementById("exp-the-vision-reveal-name"),
+    theVisionRevealPromise: document.getElementById("exp-the-vision-reveal-promise"),
+
     headline: document.getElementById("exp-headline"),
     subheadline: document.getElementById("exp-subheadline"),
     eyebrow: document.getElementById("exp-eyebrow"),
@@ -88,6 +102,7 @@
     if (els.loadFailed) els.loadFailed.hidden = name !== "loadfailed";
     if (els.signatureEntry) els.signatureEntry.hidden = name !== "signatureentry";
     if (els.theTurn) els.theTurn.hidden = name !== "theturn";
+    if (els.theVision) els.theVision.hidden = name !== "thevision";
     els.experience.hidden = name !== "experience";
   }
 
@@ -511,6 +526,249 @@
     });
   }
 
+  // =====================================================================
+  // Act III — "The Vision". Reusable Experience Engine component: a
+  // paced direct-address (same scene mechanism as Acts I-II), then two
+  // sequential inputs — business name, then the promise question —
+  // each with a skip affordance, ending in a combined reveal.
+  //
+  // CRITICAL BOUNDARY: this component has zero knowledge of how
+  // interpretation works. It calls
+  // window.BigSkyIdentityEngine.interpretPromise(promiseText, {}) and
+  // only ever reads the returned signatureId — never how it was
+  // produced, never confidence thresholds, never keyword lists. That
+  // separation is the whole point: identity-engine.js can change its
+  // entire internal implementation and this function never needs to.
+  //
+  // The visitor never sees signatureId, confidence, or any label —
+  // per "Recognition Over Personalization" and "Technology Remains
+  // Invisible" (01), interpretation only ever shows up later as tone,
+  // not as a visible result here.
+  //
+  // next({ businessName, promiseText, signatureId }) — any field may be
+  // null if skipped or not configured. Carried forward for Act IV to
+  // read; nothing persisted, nothing reloaded.
+  // =====================================================================
+  var theVisionTimers = [];
+  var theVisionActiveNameSubmit = null;
+  var theVisionActiveNameSkip = null;
+  var theVisionActivePromiseSubmit = null;
+  var theVisionActivePromiseSkip = null;
+
+  function clearTheVisionTimers() {
+    theVisionTimers.forEach(function (t) { window.clearTimeout(t); });
+    theVisionTimers = [];
+  }
+
+  function initTheVision(record, next) {
+    var config = (window.BigSkyTheVisionAdapter &&
+      window.BigSkyTheVisionAdapter.getConfig(record)) || { enabled: false };
+
+    if (!config.enabled) {
+      next({ businessName: null, promiseText: null, signatureId: null });
+      return;
+    }
+
+    var el = els.theVision;
+    var textEl = els.theVisionText;
+    var nameStepEl = els.theVisionNameStep;
+    var nameInputEl = els.theVisionNameInput;
+    var nameSkipEl = els.theVisionNameSkip;
+    var promiseStepEl = els.theVisionPromiseStep;
+    var promiseInputEl = els.theVisionPromiseInput;
+    var promiseSkipEl = els.theVisionPromiseSkip;
+    var revealEl = els.theVisionReveal;
+    var revealNameEl = els.theVisionRevealName;
+    var revealPromiseEl = els.theVisionRevealPromise;
+
+    if (!el || !textEl || !nameStepEl || !promiseStepEl) {
+      next({ businessName: null, promiseText: null, signatureId: null });
+      return;
+    }
+
+    clearTheVisionTimers();
+    var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var scenes = (config.scenes || []).slice();
+    var settled = false;
+    var businessName = null;
+    var promiseText = null;
+
+    function finish(signatureId) {
+      if (settled) return;
+      settled = true;
+      clearTheVisionTimers();
+      theVisionActiveNameSubmit = null;
+      theVisionActiveNameSkip = null;
+      theVisionActivePromiseSubmit = null;
+      theVisionActivePromiseSkip = null;
+      next({ businessName: businessName, promiseText: promiseText, signatureId: signatureId || null });
+    }
+
+    function playScene(index) {
+      if (index >= scenes.length) {
+        showNameStep();
+        return;
+      }
+      var scene = scenes[index];
+      textEl.textContent = scene.text || "";
+      textEl.hidden = false;
+      textEl.classList.remove("exp-focus-in-el", "exp-signature-entry-exit");
+      void textEl.offsetWidth;
+      textEl.classList.add("exp-focus-in-el");
+
+      var holdMs = scene.holdMs || 2500;
+      var exitMs = reducedMotion ? 0 : (scene.exitMs || 500);
+      theVisionTimers.push(window.setTimeout(function () {
+        textEl.classList.add("exp-signature-entry-exit");
+        theVisionTimers.push(window.setTimeout(function () { playScene(index + 1); }, exitMs));
+      }, holdMs));
+    }
+
+    function showNameStep() {
+      textEl.hidden = true;
+      if (!config.nameStep) { showPromiseStep(); return; }
+
+      nameStepEl.querySelector(".exp-the-vision-prompt").textContent = config.nameStep.prompt || "";
+      nameInputEl.placeholder = config.nameStep.placeholder || "";
+      nameInputEl.value = "";
+      nameStepEl.hidden = false;
+      nameInputEl.focus();
+
+      theVisionActiveNameSubmit = function () {
+        var val = (nameInputEl.value || "").trim();
+        businessName = val || null;
+        nameStepEl.hidden = true;
+        revealNameThenContinue();
+      };
+      theVisionActiveNameSkip = function () {
+        businessName = null;
+        nameStepEl.hidden = true;
+        revealNameThenContinue(); // no-ops straight to showPromiseStep() when businessName is null
+      };
+
+      if (nameSkipEl && config.nameStep.skip && config.nameStep.skip.allowSkip !== false) {
+        nameSkipEl.hidden = true;
+        var appearAfter = reducedMotion ? 0 : (config.nameStep.skip.skipAfterMs || 2000);
+        theVisionTimers.push(window.setTimeout(function () { nameSkipEl.hidden = false; }, appearAfter));
+      }
+    }
+
+    // Small ask, fast reward, per the approved architecture — the name
+    // reveals in the same hero typography before the bigger ask
+    // arrives. Skipped entirely (straight to the promise step) if
+    // there's no name to show.
+    function revealNameThenContinue() {
+      if (!businessName) { showPromiseStep(); return; }
+      revealNameEl.textContent = businessName;
+      revealNameEl.hidden = false;
+      revealNameEl.classList.remove("exp-focus-in-el");
+      void revealNameEl.offsetWidth;
+      revealNameEl.classList.add("exp-focus-in-el");
+      revealEl.hidden = false;
+      var holdMs = reducedMotion ? 0 : 1400;
+      theVisionTimers.push(window.setTimeout(showPromiseStep, holdMs));
+    }
+
+    function showPromiseStep() {
+      if (!config.promiseStep) { finish(null); return; }
+
+      promiseStepEl.querySelector(".exp-the-vision-prompt").textContent = config.promiseStep.prompt || "";
+      promiseInputEl.placeholder = config.promiseStep.placeholder || "";
+      promiseInputEl.value = "";
+      promiseStepEl.hidden = false;
+      promiseInputEl.focus();
+
+      theVisionActivePromiseSubmit = function () { submitPromise(); };
+      theVisionActivePromiseSkip = function () {
+        promiseText = null;
+        promiseStepEl.hidden = true;
+        finish(null); // no promise text — nothing to interpret, nothing to reveal a second time
+      };
+
+      if (promiseSkipEl && config.promiseStep.skip && config.promiseStep.skip.allowSkip !== false) {
+        promiseSkipEl.hidden = true;
+        var appearAfter = reducedMotion ? 0 : (config.promiseStep.skip.skipAfterMs || 2500);
+        theVisionTimers.push(window.setTimeout(function () { promiseSkipEl.hidden = false; }, appearAfter));
+      }
+    }
+
+    // The one call across this entire component that reaches outside
+    // it — and it asks a question, it does not receive an explanation.
+    // interpretPromise() is awaited exactly like any other async
+    // dependency; a failure here is caught and treated as "no match,"
+    // never as a reason to block the journey.
+    async function submitPromise() {
+      var val = (promiseInputEl.value || "").trim();
+      promiseText = val || null;
+      promiseStepEl.hidden = true;
+
+      var signatureId = null;
+      if (promiseText && window.BigSkyIdentityEngine && window.BigSkyIdentityEngine.interpretPromise) {
+        try {
+          var interpretation = await window.BigSkyIdentityEngine.interpretPromise(promiseText, {});
+          signatureId = (interpretation && interpretation.signatureId) || null;
+        } catch (e) {
+          console.error("Big Sky Command: interpretPromise failed — proceeding without a signature.", e);
+          signatureId = null;
+        }
+      }
+
+      if (!promiseText) { finish(signatureId); return; }
+
+      revealPromiseEl.textContent = promiseText;
+      revealPromiseEl.hidden = false;
+      revealPromiseEl.classList.remove("exp-focus-in-el");
+      void revealPromiseEl.offsetWidth;
+      revealPromiseEl.classList.add("exp-focus-in-el");
+      revealEl.hidden = false;
+      var holdMs = reducedMotion ? 0 : 1800;
+      theVisionTimers.push(window.setTimeout(function () { finish(signatureId); }, holdMs));
+    }
+
+    showState("thevision");
+    if (scenes.length) {
+      playScene(0);
+    } else {
+      showNameStep();
+    }
+  }
+
+  // Attached once, ever — same lesson as every other reused static
+  // element in this file: these inputs and buttons exist once in the
+  // DOM regardless of how many times initTheVision() itself runs, so
+  // listeners are wired through an indirection (the "active" function
+  // references above) rather than re-attached per call.
+  if (els.theVisionNameInput) {
+    els.theVisionNameInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && theVisionActiveNameSubmit) theVisionActiveNameSubmit();
+    });
+  }
+  if (els.theVisionNameSubmit) {
+    els.theVisionNameSubmit.addEventListener("click", function () {
+      if (theVisionActiveNameSubmit) theVisionActiveNameSubmit();
+    });
+  }
+  if (els.theVisionNameSkip) {
+    els.theVisionNameSkip.addEventListener("click", function () {
+      if (theVisionActiveNameSkip) theVisionActiveNameSkip();
+    });
+  }
+  if (els.theVisionPromiseInput) {
+    els.theVisionPromiseInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && theVisionActivePromiseSubmit) theVisionActivePromiseSubmit();
+    });
+  }
+  if (els.theVisionPromiseSubmit) {
+    els.theVisionPromiseSubmit.addEventListener("click", function () {
+      if (theVisionActivePromiseSubmit) theVisionActivePromiseSubmit();
+    });
+  }
+  if (els.theVisionPromiseSkip) {
+    els.theVisionPromiseSkip.addEventListener("click", function () {
+      if (theVisionActivePromiseSkip) theVisionActivePromiseSkip();
+    });
+  }
+
   function renderExperience(record) {
     document.title = (record.experience_name || "Big Sky Command™ Experience");
 
@@ -840,9 +1098,15 @@
       if (attempt !== currentLoadAttempt) return; // same stale-result guard, for the async completion callback
       initTheTurn(data, function (selectedCardId) {
         if (attempt !== currentLoadAttempt) return; // same guard, applied at every async handoff between acts
-        theTurnSelectedCardId = selectedCardId; // module-level — ready for a future Act III to read
-        showState("experience");
-        initScrollReveal();
+        theTurnSelectedCardId = selectedCardId; // module-level — carried forward, Act III doesn't currently read it (see note below)
+        initTheVision(data, function (visionResult) {
+          if (attempt !== currentLoadAttempt) return;
+          theVisionBusinessName = visionResult.businessName;
+          theVisionPromiseText = visionResult.promiseText;
+          theVisionSignatureId = visionResult.signatureId; // ready for Act IV to read; never rendered anywhere in Act III itself
+          showState("experience");
+          initScrollReveal();
+        });
       });
     });
   }
@@ -860,6 +1124,9 @@
   var loadInProgress = false;
   var currentLoadAttempt = 0; // incremented per attempt; see the stale-result guard in finishLoad()
   var theTurnSelectedCardId = null; // set by Act II, ready for Act III to read; no persistence — nothing here reloads the page
+  var theVisionBusinessName = null; // set by Act III
+  var theVisionPromiseText = null; // set by Act III — the literal text, first of exactly two locked appearances (see docs/14)
+  var theVisionSignatureId = null; // set by Act III via identity-engine.js — never rendered in Act III itself, only as tone later
 
   async function startExperienceLoad() {
     if (loadInProgress) return; // ignores rapid repeated Retry clicks
@@ -867,6 +1134,7 @@
     var attempt = ++currentLoadAttempt;
     clearSignatureEntryTimers(); // defensive — cancels anything left over from a prior attempt
     clearTheTurnTimers(); // same defensive cleanup, for Act II
+    clearTheVisionTimers(); // same defensive cleanup, for Act III
     showState("loading");
     try {
       await loadExperience(attempt);

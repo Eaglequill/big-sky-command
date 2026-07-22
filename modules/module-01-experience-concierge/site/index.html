@@ -122,6 +122,46 @@
     <button id="exp-the-turn-continue" class="exp-the-turn-continue" type="button" hidden>Continue</button>
   </div>
 
+  <!-- ACT III — "THE VISION" — reusable component (see initTheVision()
+       in app.js). Sibling of the other top-level states, never nested
+       inside <main id="experience">. Reuses exp-signature-entry's
+       atmosphere and text classes for the direct-address beat, same as
+       Act II. Two sequential inputs (business name, then the promise
+       question), each with a skip affordance, then a combined reveal.
+       Classification of the promise text is entirely
+       identity-engine.js's responsibility — nothing here or in app.js's
+       initTheVision() knows how that works. Content/timing comes from
+       window.BigSkyTheVisionAdapter.getConfig(record) — see
+       the-vision-adapter.js. { enabled: false } is a complete, silent
+       no-op. -->
+  <div id="exp-the-vision" class="exp-signature-entry" hidden>
+    <div class="exp-signature-entry-atmosphere" aria-hidden="true"></div>
+    <p id="exp-the-vision-text" class="exp-signature-entry-text"></p>
+
+    <div id="exp-the-vision-name-step" class="exp-the-vision-step" hidden>
+      <p class="exp-the-vision-prompt"></p>
+      <input id="exp-the-vision-name-input" class="exp-the-vision-input" type="text" autocomplete="organization" />
+      <div class="exp-the-vision-step-actions">
+        <button id="exp-the-vision-name-submit" class="exp-the-turn-continue" type="button">Next</button>
+        <button id="exp-the-vision-name-skip" class="exp-the-turn-continue" type="button" hidden>Skip</button>
+      </div>
+    </div>
+
+    <div id="exp-the-vision-promise-step" class="exp-the-vision-step" hidden>
+      <p class="exp-the-vision-prompt"></p>
+      <input id="exp-the-vision-promise-input" class="exp-the-vision-input" type="text" />
+      <div class="exp-the-vision-step-actions">
+        <button id="exp-the-vision-promise-submit" class="exp-the-turn-continue" type="button">Next</button>
+        <button id="exp-the-vision-promise-skip" class="exp-the-turn-continue" type="button" hidden>Skip</button>
+      </div>
+    </div>
+
+    <div id="exp-the-vision-reveal" class="exp-the-vision-reveal" hidden>
+      <p id="exp-the-vision-reveal-name" class="exp-the-vision-reveal-name" hidden></p>
+      <p id="exp-the-vision-reveal-promise" class="exp-the-vision-reveal-promise" hidden></p>
+    </div>
+  </div>
+
   <!-- Experience template: populated entirely from the database record -->
   <main id="experience" class="experience" hidden>
 
@@ -250,6 +290,17 @@
        file's own header comment. Provides window.BigSkyTheTurnAdapter
        for the reusable Act II ("The Turn") component in app.js. -->
   <script src="the-turn-adapter.js"></script>
+  <!-- PERMANENT, universal — not a temporary adapter. See this file's
+       own header comment. Provides window.BigSkyIdentityEngine, the
+       sole interpretation interface Act III (and every future
+       experience) calls. -->
+  <script src="identity-engine.js"></script>
+  <!-- TEMPORARY — pending migration into experience_sections. See this
+       file's own header comment. Provides window.BigSkyTheVisionAdapter
+       for the reusable Act III ("The Vision") component in app.js.
+       Configures question wording and timing only — never
+       interpretation, which belongs entirely to identity-engine.js. -->
+  <script src="the-vision-adapter.js"></script>
   <!-- Experience Engine logic -->
   <script src="app.js"></script>
 
