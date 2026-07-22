@@ -73,6 +73,7 @@
     els.loading.hidden = name !== "loading";
     els.notFound.hidden = name !== "notfound";
     if (els.loadFailed) els.loadFailed.hidden = name !== "loadfailed";
+    if (els.signatureEntry) els.signatureEntry.hidden = name !== "signatureentry";
     els.experience.hidden = name !== "experience";
   }
 
@@ -267,8 +268,7 @@
       if (settled) return;
       settled = true;
       clearSignatureEntryTimers();
-      el.hidden = true;
-      next();
+      next(); // the caller's showState("experience") now also hides this element — see showState()
     }
 
     function showCta() {
@@ -341,7 +341,14 @@
     // fetch has its own, much shorter timeout (see LOAD_TIMEOUT_MS).
     signatureEntryTimers.push(window.setTimeout(finish, config.safetyTimeoutMs || 25000));
 
-    el.hidden = false;
+    // THE FIX: this must go through showState(), not a direct el.hidden
+    // assignment. #exp-signature-entry now lives as a sibling of
+    // #experience (see index.html), but showState() is still the single
+    // place that decides which top-level state is visible — calling it
+    // here, instead of just unhiding this element directly, is what
+    // actually makes Signature Entry appear instead of staying invisible
+    // behind whatever state was active before.
+    showState("signatureentry");
     playScene(0);
   }
 

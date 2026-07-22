@@ -509,6 +509,230 @@ window.BigSkyDataProvider = (function () {
     return { data: result.data, error: result.error };
   }
 
+  // =====================================================================
+  // Experience Sections additions (05_experience_sections.sql). Nothing
+  // above this line is changed by these additions. The public renderer
+  // (app.js) does not call any of these yet — see PROJECT_HOME.md for
+  // the follow-up step that connects them.
+  // =====================================================================
+
+  // App-level allowlist for section_type. The database intentionally
+  // does NOT CHECK-constrain this column (same reasoning as
+  // scan_destinations.destination_type in 04_scan_architecture.sql), so
+  // adding a new section type later is a one-line change here, never a
+  // migration.
+  var ALLOWED_SECTION_TYPES = [
+    "welcome", "introduction", "services", "gallery", "reviews",
+    "faq", "resources", "contact", "cta", "concierge"
+  ];
+
+  function validateSectionType(type) {
+    if (ALLOWED_SECTION_TYPES.indexOf(type) === -1) {
+      return new Error(
+        "Unknown section_type \"" + type + "\". Allowed types: " +
+        ALLOWED_SECTION_TYPES.join(", ") + ". (Application-layer check " +
+        "only — the database does not enforce a fixed list on purpose, " +
+        "so new types can be added here without a migration.)"
+      );
+    }
+    return null;
+  }
+
+  // Mirrors the database's own `jsonb_typeof(content) = 'object'` check
+  // — catches the mistake client-side before a round trip, without
+  // constraining which keys any given section type actually uses.
+  function validateSectionContent(content) {
+    if (content === undefined || content === null) return null; // defaults to {} at insert
+    if (typeof content !== "object" || Array.isArray(content)) {
+      return new Error("content must be a plain object (matches the database's jsonb_typeof(content) = 'object' constraint).");
+    }
+    return null;
+  }
+
+  // --- Reads --------------------------------------------------------
+
+  // Public-shaped read: enabled, non-deleted sections only, in display
+  // order. This is what the (not-yet-built) renderer update will call.
+  // Also safe to call from an authenticated context — the explicit
+  // .eq("enabled", true) here means Studio callers get the same
+  // "what a visitor would actually see" result regardless of what the
+  // broader authenticated RLS policy would otherwise allow through.
+  async function getEnabledSections(experienceId, config) {
+    config = resolveConfig(config);
+    var guardErr = requireSupabaseMode(config);
+    if (guardErr) return { data: null, error: guardErr };
+
+    var client = getClient(config);
+    var result = await client
+      .from("experience_sections")
+      .select("*")
+      .eq("experience_id", experienceId)
+      .eq("enabled", true)
+      .is("deleted_at", null)
+      .order("display_order", { ascending: true });
+
+    return { data: result.data, error: result.error };
+  }
+
+  // Admin/Studio read: every non-deleted section regardless of enabled
+  // state, still ordered by display_order — for the edit UI's section
+  // list, where disabled sections need to stay visible (and reorderable)
+  // to the person editing them.
+  async function listSectionsForExperience(experienceId, config) {
+    config = resolveConfig(config);
+    var guardErr = requireSupabaseMode(config);
+    if (guardErr) return { data: null, error: guardErr };
+
+    var client = getClient(config);
+    var result = await client
+      .from("experience_sections")
+      .select("*")
+      .eq("experience_id", experienceId)
+      .is("deleted_at", null)
+      .order("display_order", { ascending: true });
+
+    return { data: result.data, error: result.error };
+  }
+
+  async function getSectionById(id, config) {
+    config = resolveConfig(config);
+    var guardErr = requireSupabaseMode(config);
+    if (guardErr) return { data: null, error: guardErr };
+
+    var client = getClient(config);
+    var result = await client
+      .from("experience_sections")
+      .select("*")
+      .eq("id", id)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    return { data: result.data, error: result.error };
+  }
+
+  // --- Writes ---------------------------------------------------------
+
+  async function createSection(record, config) {
+    config = resolveConfig(config);
+    var guardErr = requireSupabaseMode(config);
+    if (guardErr) return { data: null, error: guardErr };
+
+    if (!record || !record.experience_id) {
+      return { data: null, error: new Error("experience_id is required.") };
+    }
+    var typeErr = validateSectionType(record.section_type);
+    if (typeErr) return { data: null, error: typeErr };
+    var contentErr = validateSectionContent(record.content);
+    if (contentErr) return { data: null, error: contentErr };
+
+    var client = getClient(config);
+    var result = await client
+      .from("experience_sections")
+      .insert({
+        experience_id: record.experience_id,
+        section_type: record.section_type,
+        title: record.title || null,
+        body_text: record.body_text || null,
+        content: record.content || {},
+        visibility_rules: record.visibility_rules || null,
+        enabled: record.enabled !== undefined ? !!record.enabled : true,
+        display_order: record.display_order !== undefined ? record.display_order : 0
+      })
+      .select()
+      .single();
+
+    return { data: result.data, error: result.error };
+  }
+
+  async function updateSection(id, patch, config) {
+    config = resolveConfig(config);
+    var guardErr = requireSupabaseMode(config);
+    if (guardErr) return { data: null, error: guardErr };
+
+    if (patch && patch.section_type !== undefined) {
+      var typeErr = validateSectionType(patch.section_type);
+      if (typeErr) return { data: null, error: typeErr };
+    }
+    if (patch && patch.content !== undefined) {
+      var contentErr = validateSectionContent(patch.content);
+      if (contentErr) return { data: null, error: contentErr };
+    }
+
+    var client = getClient(config);
+    var result = await client
+      .from("experience_sections")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .single();
+
+    return { data: result.data, error: result.error };
+  }
+
+  // Thin, explicit wrapper over updateSection so a toggle in the Studio
+  // UI reads as its own action — same pattern as setPublishStatus() for
+  // experiences.
+  async function setSectionEnabled(id, enabled, config) {
+    return updateSection(id, { enabled: !!enabled }, config);
+  }
+
+  // orderedIds: array of section UUIDs in the desired display order.
+  // Writes display_order = array index for each row. Not wrapped in a
+  // single DB transaction — supabase-js has no client-side
+  // multi-statement transaction primitive — so a failure partway
+  // through can leave orders partially updated. Acceptable for Phase 1
+  // volume/risk; flagged here for future hardening (e.g. a
+  // SECURITY DEFINER RPC that reorders atomically server-side,
+  // mirroring resolve_scan()'s pattern) once reordering is a frequent,
+  // high-stakes action. The .eq("experience_id", ...) guard on every
+  // write prevents a caller from accidentally reordering a section that
+  // belongs to a different experience than the one being edited.
+  async function reorderSections(experienceId, orderedIds, config) {
+    config = resolveConfig(config);
+    var guardErr = requireSupabaseMode(config);
+    if (guardErr) return { data: null, error: guardErr };
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return { data: null, error: new Error("orderedIds must be a non-empty array of section IDs.") };
+    }
+
+    var client = getClient(config);
+    var updated = [];
+    for (var i = 0; i < orderedIds.length; i++) {
+      var result = await client
+        .from("experience_sections")
+        .update({ display_order: i })
+        .eq("id", orderedIds[i])
+        .eq("experience_id", experienceId)
+        .select()
+        .single();
+      if (result.error) {
+        return {
+          data: updated,
+          error: new Error(
+            "Reorder stopped after " + updated.length + " of " + orderedIds.length +
+            " updates — display_order may now be inconsistent. Underlying error: " +
+            friendlyErrorMessage(result.error)
+          )
+        };
+      }
+      updated.push(result.data);
+    }
+    return { data: updated, error: null };
+  }
+
+  function friendlyErrorMessage(error) {
+    return (error && error.message) || String(error);
+  }
+
+  // Soft delete only — sets deleted_at, never issues a hard DELETE.
+  // Matches this project's existing convention of never hard-deleting
+  // rows the public engine or Studio might still reference (experiences
+  // use status; scan_destinations use active). Every read method above
+  // already excludes rows where deleted_at is set.
+  async function softDeleteSection(id, config) {
+    return updateSection(id, { deleted_at: new Date().toISOString() }, config);
+  }
+
   return {
     // Original — unchanged
     getExperience: getExperience,
@@ -536,6 +760,16 @@ window.BigSkyDataProvider = (function () {
     // Big Sky Scan™
     resolveScan: resolveScan,
     ensureScanDestination: ensureScanDestination,
-    getScanDestinationForExperience: getScanDestinationForExperience
+    getScanDestinationForExperience: getScanDestinationForExperience,
+
+    // Experience Sections
+    getEnabledSections: getEnabledSections,
+    listSectionsForExperience: listSectionsForExperience,
+    getSectionById: getSectionById,
+    createSection: createSection,
+    updateSection: updateSection,
+    setSectionEnabled: setSectionEnabled,
+    reorderSections: reorderSections,
+    softDeleteSection: softDeleteSection
   };
 })();

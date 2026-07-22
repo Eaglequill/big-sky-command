@@ -55,29 +55,56 @@
     </p>
   </div>
 
+  <!-- Load-failure fallback: distinct from state-notfound above. Shown
+       only when the request itself didn't complete — a timeout, a
+       rejected request, or an unexpected exception — never for an
+       ordinary "no such experience" result, which keeps using
+       state-notfound exactly as before. See startExperienceLoad() in
+       app.js. Reuses the existing .state-screen class — no new visual
+       tokens introduced for the container itself. -->
+  <div id="state-loadfailed" class="state-screen" hidden>
+    <h1>We're having trouble opening this experience right now.</h1>
+    <p>
+      Please try again. If the problem continues, you can return to Big
+      Sky Lead Partners.
+    </p>
+    <div class="state-screen-actions">
+      <button id="state-loadfailed-retry" class="state-action state-action-primary" type="button">Try Again</button>
+      <!-- V1 stopgap: hardcoded to Big Sky Lead Partners' own experience.
+           Needs to become configurable per-experience before this
+           component is used for any other client. -->
+      <a id="state-loadfailed-return" class="state-action state-action-secondary" href="/e/BS000001">Return to Big Sky Lead Partners</a>
+    </div>
+  </div>
+
+  <!-- SIGNATURE ENTRY — reusable opening-sequence component (see
+       initSignatureEntry() in app.js). MUST live as a sibling of
+       state-loading/state-notfound/state-loadfailed/experience, NOT
+       nested inside <main id="experience">, since <main> stays hidden
+       via showState() until AFTER this sequence completes — nesting it
+       inside <main> means it could never actually become visible, no
+       matter what its own `hidden` attribute was set to. Renders a
+       paced sequence of scenes defined entirely by configuration
+       returned from window.BigSkySignatureEntryAdapter.getConfig(record)
+       — this markup and the component that drives it know nothing about
+       Big Sky Lead Partners specifically, or about any other client.
+       Today that configuration comes from signature-entry-adapter.js,
+       a temporary, clearly-isolated lookup table pending migration into
+       experience_sections — see that file's own header comment for the
+       removal plan. An experience with no configuration (the default
+       for every client until one is set up) gets { enabled: false } and
+       this component is a complete, silent no-op — no placeholder, no
+       flash, no broken state, exactly the same guarantee the old
+       reserved video slot made. -->
+  <div id="exp-signature-entry" class="exp-signature-entry" hidden>
+    <div class="exp-signature-entry-atmosphere" aria-hidden="true"></div>
+    <p id="exp-signature-entry-text" class="exp-signature-entry-text"></p>
+    <button id="exp-signature-entry-cta" class="exp-signature-entry-cta" type="button" hidden></button>
+    <button id="exp-signature-entry-skip" class="exp-signature-entry-skip" type="button" hidden>Skip</button>
+  </div>
+
   <!-- Experience template: populated entirely from the database record -->
   <main id="experience" class="experience" hidden>
-
-    <!-- SIGNATURE ENTRY — reusable opening-sequence component (see
-         initSignatureEntry() in app.js). Renders a paced sequence of
-         scenes defined entirely by configuration returned from
-         window.BigSkySignatureEntryAdapter.getConfig(record) — this
-         markup and the component that drives it know nothing about
-         Big Sky Lead Partners specifically, or about any other client.
-         Today that configuration comes from signature-entry-adapter.js,
-         a temporary, clearly-isolated lookup table pending migration
-         into experience_sections — see that file's own header comment
-         for the removal plan. An experience with no configuration (the
-         default for every client until one is set up) gets
-         { enabled: false } and this component is a complete, silent
-         no-op — no placeholder, no flash, no broken state, exactly the
-         same guarantee the old reserved video slot made. -->
-    <div id="exp-signature-entry" class="exp-signature-entry" hidden>
-      <div class="exp-signature-entry-atmosphere" aria-hidden="true"></div>
-      <p id="exp-signature-entry-text" class="exp-signature-entry-text"></p>
-      <button id="exp-signature-entry-cta" class="exp-signature-entry-cta" type="button" hidden></button>
-      <button id="exp-signature-entry-skip" class="exp-signature-entry-skip" type="button" hidden>Skip</button>
-    </div>
 
     <!-- 1. HERO — where the visitor lands after the opening sequence.
          Identity is present but quiet (a small eyebrow, not a logo
