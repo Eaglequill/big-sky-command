@@ -14,14 +14,14 @@
 //   2. Ask the data provider for an active record matching whichever
 //      identifier was found.
 //   3. Populate the template in index.html with that record's data.
-//   4. Play the shared Opening Sequence if one exists (see
-//      initIntroSequence below), then reveal the page.
+//   4. Run the Signature Entry sequence if one is configured for this
+//      experience (see initSignatureEntry below), then reveal the page.
 //   5. If neither identifier is present, or no active record matches,
 //      show the fallback message instead.
 //
 // Journey this template renders, in fixed order (see index.html):
-//   Opening Sequence (reserved) → Hero → Welcome Video → Lead Capture →
-//   AI Concierge (reserved) → Thank You
+//   Signature Entry (reusable, config-driven) → Hero → Welcome Video →
+//   Lead Capture → AI Concierge (reserved) → Thank You
 // Video and Lead Capture always render — either the real content, or a
 // designed placeholder state — so every future client's experience shows
 // the full journey from day one, and swapping in real assets later never
@@ -35,7 +35,10 @@
     notFound: document.getElementById("state-notfound"),
     experience: document.getElementById("experience"),
 
-    intro: document.getElementById("exp-intro-sequence"),
+    signatureEntry: document.getElementById("exp-signature-entry"),
+    signatureEntryText: document.getElementById("exp-signature-entry-text"),
+    signatureEntryCta: document.getElementById("exp-signature-entry-cta"),
+    signatureEntrySkip: document.getElementById("exp-signature-entry-skip"),
 
     headline: document.getElementById("exp-headline"),
     subheadline: document.getElementById("exp-subheadline"),
@@ -45,6 +48,8 @@
     video: document.getElementById("exp-video"),
     videoPlaceholder: document.getElementById("exp-video-placeholder"),
     videoPlaceholderText: document.getElementById("exp-video-placeholder-text"),
+
+    dynamicSections: document.getElementById("exp-dynamic-sections"),
 
     cta: document.getElementById("exp-cta"),
     formEmbed: document.getElementById("exp-form-embed"),
@@ -164,48 +169,124 @@
     targets.forEach(function (el) { observer.observe(el); });
   }
 
-  // Plays the shared Opening Sequence (the "eagle" intro) if one has been
-  // installed, then calls `next()`. If no intro file exists — the case
-  // today — this fails silently and calls `next()` immediately, so the
-  // visitor never sees a flash, a broken player, or a placeholder. This
-  // is engine-level content shared by every client, not something a
-  // Business Overlay ever configures.
-  function initIntroSequence(next) {
-    var video = els.intro;
-    if (!video) { next(); return; }
+  // =====================================================================
+  // Signature Entry — reusable opening-sequence component. Renders a
+  // paced sequence of scenes defined entirely by configuration; this
+  // function contains no business-specific text, colors, or copy of any
+  // kind. See signature-entry-adapter.js for where today's
+  // configuration actually comes from (a temporary, isolated adapter,
+  // pending migration into experience_sections) — this function only
+  // ever calls window.BigSkySignatureEntryAdapter.getConfig(record) and
+  // has no knowledge of what is behind that call. An experience with no
+  // configuration (the default for every client, including every future
+  // one, until a Signature Entry is explicitly set up for it) is a
+  // complete, silent no-op — next() fires immediately, no flash, no
+  // placeholder, no broken state, the same guarantee the video-based
+  // reserved slot this replaces used to make.
+  // =====================================================================
+  function initSignatureEntry(record, next) {
+    var config = (window.BigSkySignatureEntryAdapter &&
+      window.BigSkySignatureEntryAdapter.getConfig(record)) || { enabled: false };
 
-    var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var settled = false;
-    function proceed() {
-      if (settled) return;
-      settled = true;
-      video.hidden = true;
-      video.removeEventListener("click", proceed);
+    if (!config.enabled || !config.scenes || !config.scenes.length) {
       next();
-    }
-
-    // No intro file installed (the current state for every client until
-    // real footage exists) — this fires almost immediately and we move on.
-    video.addEventListener("error", proceed);
-
-    if (reducedMotion) {
-      // Real footage, once it exists, is narrative content rather than
-      // decorative motion — but skipping it under reduced-motion is the
-      // more respectful default until there's a reason to reconsider.
-      proceed();
       return;
     }
 
-    video.addEventListener("loadeddata", function () {
-      video.hidden = false;
-      video.play().catch(proceed); // autoplay can be blocked — fail gracefully
-    });
-    video.addEventListener("ended", proceed);
-    video.addEventListener("click", proceed); // tap/click anywhere to skip
+    var el = els.signatureEntry;
+    var textEl = els.signatureEntryText;
+    var ctaEl = els.signatureEntryCta;
+    var skipEl = els.signatureEntrySkip;
 
-    // Safety net: never let a stalled video trap the visitor on a blank
-    // screen. If nothing has happened within 8 seconds, move on.
-    window.setTimeout(proceed, 8000);
+    // Markup missing for some reason — never trap the visitor waiting
+    // on elements that don't exist.
+    if (!el || !textEl || !ctaEl) {
+      next();
+      return;
+    }
+
+    var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var scenes = config.scenes.slice().sort(function (a, b) {
+      return (a.order || 0) - (b.order || 0);
+    });
+    var settled = false;
+    var timers = [];
+
+    function clearTimers() {
+      timers.forEach(function (t) { window.clearTimeout(t); });
+      timers = [];
+    }
+
+    // Full skip — used by the safety timeout and, in a future version,
+    // could be wired to a "skip everything" action. Today only the
+    // safety net calls this directly; the skip button calls showCta()
+    // instead, so the CTA tap itself is never bypassed (see below).
+    function finish() {
+      if (settled) return;
+      settled = true;
+      clearTimers();
+      el.hidden = true;
+      next();
+    }
+
+    function showCta() {
+      clearTimers();
+      textEl.hidden = true;
+      if (skipEl) skipEl.hidden = true;
+      ctaEl.textContent = (config.cta && config.cta.label) || "Continue";
+      ctaEl.hidden = false;
+      ctaEl.classList.remove("exp-focus-in-el");
+      void ctaEl.offsetWidth; // reflow so the reveal animation reliably plays
+      ctaEl.classList.add("exp-focus-in-el");
+    }
+
+    function playScene(index) {
+      if (index >= scenes.length) {
+        showCta();
+        return;
+      }
+      var scene = scenes[index];
+      textEl.textContent = scene.text || "";
+      textEl.hidden = false;
+      textEl.classList.remove("exp-focus-in-el", "exp-signature-entry-exit");
+      void textEl.offsetWidth; // reflow so the animation replays for every scene
+      textEl.classList.add("exp-focus-in-el");
+
+      var holdMs = scene.holdMs || 2500; // reading time — unaffected by reduced motion
+      var exitMs = reducedMotion ? 0 : (scene.exitMs || 500);
+
+      timers.push(window.setTimeout(function () {
+        textEl.classList.add("exp-signature-entry-exit");
+        timers.push(window.setTimeout(function () {
+          playScene(index + 1);
+        }, exitMs));
+      }, holdMs));
+    }
+
+    ctaEl.addEventListener("click", function () {
+      var action = (config.cta && config.cta.action) || "reveal-experience";
+      // Only one action exists in V1. Anything else fails safe by
+      // proceeding anyway, rather than leaving the visitor stuck on a
+      // button that does nothing.
+      finish();
+      void action;
+    });
+
+    if (skipEl && (!config.skip || config.skip.allowSkip !== false)) {
+      var skipAfterMs = (config.skip && config.skip.skipAfterMs) || 1500;
+      timers.push(window.setTimeout(function () {
+        skipEl.hidden = false;
+      }, skipAfterMs));
+      skipEl.addEventListener("click", showCta); // stops pacing, jumps to the CTA — never bypasses the tap itself
+    }
+
+    // Safety net: never let a stalled or misconfigured sequence trap the
+    // visitor. Mirrors the original video intro's 8-second timeout,
+    // scaled up since this sequence is intentionally longer.
+    timers.push(window.setTimeout(finish, config.safetyTimeoutMs || 25000));
+
+    el.hidden = false;
+    playScene(0);
   }
 
   function renderExperience(record) {
@@ -282,6 +363,115 @@
       ? record.thank_you_message
       : "Thanks for connecting with " + businessLabel + ". We received your information and will follow up personally.";
   }
+
+  // =====================================================================
+  // Experience Sections / Experience Flow — additive. Nothing above this
+  // point is changed by any of what follows. Per the Constitution
+  // (Experience Philosophy): "the renderer's only responsibility is to
+  // render... Experience Flow determines what the customer experiences."
+  // That boundary is implemented as a distinct step below
+  // (resolveExperienceFlow) sitting between loading section data and
+  // drawing it — the renderer itself never inspects visibility_rules or
+  // decides whether a section belongs on the page.
+  // =====================================================================
+
+  // The seam future Experience Flow logic plugs into. Today this is an
+  // identity function — nothing is filtered, reordered, or personalized.
+  // `context` is threaded through now, even though nothing populates it
+  // meaningfully yet, so a future version can extend what this function
+  // *does* without changing what calls it or how. See
+  // docs/02_PRODUCT_ARCHITECTURE.md §4 and docs/03_DECISIONS.md
+  // (2026-07-20, "Experience Flow established as a distinct
+  // architectural seam") for the full reasoning.
+  function resolveExperienceFlow(sections, context) {
+    return sections;
+  }
+
+  // load → order → resolve → render. Fire-and-forget from finishLoad():
+  // sections are supplementary to the core journey (hero, video, form,
+  // thank-you), not required for it, so this never blocks or delays the
+  // existing reveal/timing. An experience with no enabled sections is a
+  // valid, designed state — nothing renders, nothing errors, the
+  // container stays hidden exactly as it does today for every existing
+  // client.
+  async function loadAndRenderSections(record) {
+    if (!els.dynamicSections || !record || !record.id) return;
+
+    var config = window.BIG_SKY_CONFIG || {};
+    var result = await window.BigSkyDataProvider.getEnabledSections(record.id, config);
+
+    // Covers three cases identically and safely: a real error (e.g.
+    // DATA_PROVIDER is "json", which doesn't support Sections yet), no
+    // data, or an empty array. All three mean "render nothing" — never
+    // a broken or error state on the public page.
+    if (result.error || !result.data || !result.data.length) return;
+
+    // order: already ordered by display_order ascending — enforced by
+    // the getEnabledSections() query itself, not re-sorted here.
+    var context = {}; // reserved for future Experience Flow inputs (audience, schedule, personalization signals) — unused today
+    var resolved = resolveExperienceFlow(result.data, context);
+
+    renderSections(resolved);
+  }
+
+  function renderSections(sections) {
+    if (!sections.length) return;
+    sections.forEach(function (section) {
+      var renderFn = SECTION_RENDERERS[section.section_type] || renderSectionGeneric;
+      var el = renderFn(section);
+      if (el) els.dynamicSections.appendChild(el);
+    });
+    els.dynamicSections.hidden = false;
+    if (window.matchMedia && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      initScrollReveal(); // safe to call again — only newly-added [data-reveal] targets are unobserved
+    } else {
+      els.dynamicSections.querySelectorAll("[data-reveal]").forEach(function (el) {
+        el.classList.add("is-visible");
+      });
+    }
+  }
+
+  // V1 fallback renderer, shared by every section_type today. Reuses the
+  // existing .exp-section / .exp-section-inner shell and existing
+  // heading/body classes — no new CSS required. Splitting any one type
+  // out to its own renderer later (e.g. gallery as an image grid) is a
+  // one-line addition to SECTION_RENDERERS below, not a rewrite of this
+  // function or of anything else in the file.
+  function renderSectionGeneric(section) {
+    var wrapper = document.createElement("section");
+    wrapper.className = "exp-section exp-section--dynamic";
+    wrapper.setAttribute("data-reveal", "");
+    wrapper.dataset.sectionType = section.section_type;
+    wrapper.dataset.sectionId = section.id;
+
+    var inner = document.createElement("div");
+    inner.className = "exp-section-inner";
+
+    if (isUsable(section.title)) {
+      var heading = document.createElement("h2");
+      heading.className = "exp-cta-heading"; // reuses existing heading style
+      heading.textContent = section.title;
+      inner.appendChild(heading);
+    }
+
+    if (isUsable(section.body_text)) {
+      var body = document.createElement("p");
+      body.className = "exp-ai-copy"; // reuses existing body-copy style
+      body.textContent = section.body_text;
+      inner.appendChild(body);
+    }
+
+    wrapper.appendChild(inner);
+    return wrapper;
+  }
+
+  // Dispatch table, keyed by section_type. Empty today — every V1 type
+  // (welcome, introduction, services, gallery, reviews, faq, resources,
+  // contact, cta, concierge) falls through to renderSectionGeneric()
+  // above via the `|| renderSectionGeneric` default in renderSections().
+  // Adding a dedicated renderer for one type later means adding one key
+  // here; nothing else in this file changes.
+  var SECTION_RENDERERS = {};
 
   // NEW — additive. Extracts a scan code from "/scan/{code}". Only
   // consulted when neither an /e/{id} nor an /experience/{slug} was
@@ -391,7 +581,8 @@
     }
 
     renderExperience(data);
-    initIntroSequence(function () {
+    loadAndRenderSections(data); // additive, fire-and-forget — see comment above the function itself
+    initSignatureEntry(data, function () {
       showState("experience");
       initScrollReveal();
     });

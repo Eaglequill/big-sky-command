@@ -26,11 +26,17 @@
        or edit it in Supabase instead.
 
        Journey this template is built around, in fixed order:
-         Opening Sequence (reserved) → Hero → Philosophy → Welcome Video →
+         Signature Entry (reusable, config-driven — see below) → Hero →
+         Philosophy → Welcome Video →
+         Dynamic Sections (reserved, see #exp-dynamic-sections) →
          Lead Capture → AI Concierge (reserved) → Thank You
-       The Opening Sequence is shared engine-level content (one cinematic
-       intro for every client), not Business Overlay data — see the
-       comment above <video id="exp-intro-sequence"> below.
+       Signature Entry is a reusable Experience Engine component. It
+       contains no business-specific text — its content comes entirely
+       from configuration, resolved by whatever
+       window.BigSkySignatureEntryAdapter.getConfig(record) returns.
+       See the comment above #exp-signature-entry below, and
+       signature-entry-adapter.js, for where that configuration
+       currently comes from and how it will later change.
        =================================================================== -->
 
   <!-- Loading state: shown immediately, hidden once a record loads or fails -->
@@ -52,16 +58,26 @@
   <!-- Experience template: populated entirely from the database record -->
   <main id="experience" class="experience" hidden>
 
-    <!-- OPENING SEQUENCE — reserved for the eagle sequence: one shared,
-         cinematic intro that plays before every Big Sky Command
-         Experience, regardless of client. Not business-specific, so it
-         is not a Business Overlay field — it's engine-level content, a
-         single video file the installer drops in later. Today, with no
-         file present, this fails silently in app.js and the visitor
-         goes straight to the hero below — no placeholder, no flash, no
-         broken state. The moment real footage exists, it's a file drop,
-         not a rebuild. -->
-    <video id="exp-intro-sequence" class="exp-intro-sequence" src="intro.mp4" muted playsinline hidden></video>
+    <!-- SIGNATURE ENTRY — reusable opening-sequence component (see
+         initSignatureEntry() in app.js). Renders a paced sequence of
+         scenes defined entirely by configuration returned from
+         window.BigSkySignatureEntryAdapter.getConfig(record) — this
+         markup and the component that drives it know nothing about
+         Big Sky Lead Partners specifically, or about any other client.
+         Today that configuration comes from signature-entry-adapter.js,
+         a temporary, clearly-isolated lookup table pending migration
+         into experience_sections — see that file's own header comment
+         for the removal plan. An experience with no configuration (the
+         default for every client until one is set up) gets
+         { enabled: false } and this component is a complete, silent
+         no-op — no placeholder, no flash, no broken state, exactly the
+         same guarantee the old reserved video slot made. -->
+    <div id="exp-signature-entry" class="exp-signature-entry" hidden>
+      <div class="exp-signature-entry-atmosphere" aria-hidden="true"></div>
+      <p id="exp-signature-entry-text" class="exp-signature-entry-text"></p>
+      <button id="exp-signature-entry-cta" class="exp-signature-entry-cta" type="button" hidden></button>
+      <button id="exp-signature-entry-skip" class="exp-signature-entry-skip" type="button" hidden>Skip</button>
+    </div>
 
     <!-- 1. HERO — where the visitor lands after the opening sequence.
          Identity is present but quiet (a small eyebrow, not a logo
@@ -115,6 +131,16 @@
         </div>
       </div>
     </section>
+
+    <!-- DYNAMIC SECTIONS — reserved insertion point for Experience
+         Sections (see experience_sections table / Experience Flow,
+         docs/02_PRODUCT_ARCHITECTURE.md §4). Empty and hidden by
+         default; app.js populates it only if the experience has
+         enabled sections, and leaves it hidden otherwise. No visual or
+         structural change for any experience that doesn't use Sections
+         yet — every existing client's page is byte-for-byte the same
+         as before this container existed. -->
+    <div id="exp-dynamic-sections" class="exp-dynamic-sections" hidden></div>
 
     <!-- 3. LEAD CAPTURE — feels like the natural next step, not a form. -->
     <section class="exp-section" id="exp-form-section" data-reveal>
@@ -170,6 +196,10 @@
   <script src="config.js"></script>
   <!-- The only file that knows where experience records come from. -->
   <script src="data-provider.js"></script>
+  <!-- TEMPORARY — pending migration into experience_sections. See this
+       file's own header comment. Provides window.BigSkySignatureEntryAdapter
+       for the reusable Signature Entry component in app.js. -->
+  <script src="signature-entry-adapter.js"></script>
   <!-- Experience Engine logic -->
   <script src="app.js"></script>
 

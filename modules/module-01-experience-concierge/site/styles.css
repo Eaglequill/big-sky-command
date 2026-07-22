@@ -172,21 +172,92 @@ p { margin: 0; }
 
 /* ---------------- 1. Hero ---------------- */
 
-/* ---------------- Opening Sequence (reserved) ---------------- */
-/* Full-viewport, plays before the hero if an intro file has been
-   installed (see index.html comment). Hidden by default; app.js reveals
-   it only once the video actually has data to show, so a missing file
-   never causes a flash of black or a broken player icon. */
+/* ---------------- Signature Entry (reusable) ---------------- */
+/* Full-viewport, config-driven opening sequence. No client-specific
+   colors or copy here — every value below is either an existing
+   design token (--exp-primary/secondary, --exp-font-display,
+   --exp-ease, etc.) or a new rule generic enough to serve any future
+   client's Signature Entry configuration, not just Big Sky Lead
+   Partners'. Hidden and a complete no-op for any experience without a
+   configuration — see index.html and signature-entry-adapter.js. */
 
-.exp-intro-sequence {
+.exp-signature-entry {
   position: fixed;
   inset: 0;
   z-index: 10;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 0 28px;
+  background: var(--exp-deep);
+  text-align: center;
+}
+
+.exp-signature-entry-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    180deg,
+    var(--exp-night) 0%,
+    var(--exp-primary) 60%,
+    var(--exp-deep) 100%
+  );
+}
+
+.exp-signature-entry-text {
+  margin: 0;
+  max-width: 20ch;
+  font-family: var(--exp-font-display);
+  font-weight: 500;
+  font-size: clamp(1.5rem, 6vw, 2.3rem);
+  line-height: 1.35;
+  color: var(--exp-ink);
+}
+
+/* Exit fade — new, since the existing exp-focus-in keyframe only
+   covers reveal, not exit. Same easing/duration language as the rest
+   of the template, not a new visual style. */
+.exp-signature-entry-exit {
+  animation: exp-signature-entry-fade-out 0.5s var(--exp-ease) both;
+}
+
+@keyframes exp-signature-entry-fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+.exp-signature-entry-cta {
+  font-family: var(--exp-font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--exp-deep);
+  background: var(--exp-secondary);
+  border: none;
+  border-radius: var(--exp-radius);
+  padding: 14px 32px;
   cursor: pointer;
+}
+
+.exp-signature-entry-skip {
+  position: absolute;
+  bottom: 30px;
+  right: 24px;
+  background: transparent;
+  border: none;
+  color: var(--exp-ink-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Reusable utility — applies the EXISTING exp-focus-in keyframe
+   (defined below, under Hero) to any element, not just the headline.
+   The keyframe itself is not duplicated; this is the one new selector
+   needed to reuse it elsewhere. */
+.exp-focus-in-el {
+  animation: exp-focus-in 0.9s var(--exp-ease) both;
 }
 
 /* ---------------- 1. Hero — where the visitor arrives ---------------- */
