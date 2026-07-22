@@ -277,14 +277,34 @@
       if (skipEl) skipEl.hidden = true;
       ctaEl.textContent = (config.cta && config.cta.label) || "Continue";
       ctaEl.hidden = false;
-      ctaEl.classList.remove("exp-focus-in-el");
+      ctaEl.classList.remove("exp-signature-entry-cta-rise", "exp-signature-entry-cta-open");
       void ctaEl.offsetWidth; // reflow so the reveal animation reliably plays
-      ctaEl.classList.add("exp-focus-in-el");
+      ctaEl.classList.add("exp-signature-entry-cta-rise");
+
+      // Staged second beat: the horizon line opens beneath the words
+      // once they've settled, not simultaneously — the invitation is
+      // spoken first, then the way opens. Reduced-motion aware, same
+      // treatment as every other timed beat in this sequence.
+      var lineDelayMs = reducedMotion ? 0 : 900;
+      signatureEntryTimers.push(window.setTimeout(function () {
+        ctaEl.classList.add("exp-signature-entry-cta-open");
+      }, lineDelayMs));
     }
 
     function playScene(index) {
       if (index >= scenes.length) {
-        showCta();
+        // A beat of true silence — nothing visible at all — before the
+        // CTA rises. This is staging, not a delay: the pause is what
+        // makes the button feel like an invitation arriving rather than
+        // a UI element simply appearing. Skipped under reduced motion,
+        // same treatment as the scene exit transitions — this is
+        // decorative pacing, not reading time. The skip button
+        // deliberately bypasses this entirely (calls showCta directly)
+        // since skipping is the visitor explicitly asking to move
+        // faster — respecting that choice matters more here than
+        // preserving the staging for its own sake.
+        var silenceMs = reducedMotion ? 0 : 900;
+        signatureEntryTimers.push(window.setTimeout(showCta, silenceMs));
         return;
       }
       var scene = scenes[index];

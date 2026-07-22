@@ -105,6 +105,41 @@ p { margin: 0; }
   line-height: 1.5;
 }
 
+/* Load-failure fallback actions — new, but every value below is an
+   existing design token (--exp-font-body, --exp-radius, --exp-deep,
+   --exp-secondary, --exp-ink-muted, --exp-glass-border). No new colors
+   or fonts introduced. */
+.state-screen-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.state-action {
+  font-family: var(--exp-font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--exp-radius);
+  padding: 12px 24px;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  border: none;
+}
+
+.state-action-primary {
+  color: var(--exp-deep);
+  background: var(--exp-secondary);
+}
+
+.state-action-secondary {
+  color: var(--exp-ink-muted);
+  background: transparent;
+  border: 1px solid var(--exp-glass-border);
+}
+
 .spinner {
   width: 30px;
   height: 30px;
@@ -229,16 +264,70 @@ p { margin: 0; }
   to { opacity: 0; transform: translateY(-8px); }
 }
 
+/* THE THRESHOLD — deliberately not a button. The visitor isn't
+   clicking a call-to-action; they're accepting an invitation, so this
+   borrows the template's own horizon motif (see .exp-hero::before —
+   "the one quiet signature motif of this template") instead of a UI
+   affordance. Typography is --exp-font-display, italic — the same
+   register used for the headline, the Philosophy line, and the AI
+   Concierge heading, every other moment of emotional weight in this
+   template — not --exp-font-body, which is reserved for captions and
+   UI elsewhere. No fill, no border-radius, no box: the tap target is
+   real (generous padding) but invisible, the same pattern a text link
+   uses, with the horizon line beneath standing in for an underline. */
 .exp-signature-entry-cta {
-  font-family: var(--exp-font-body);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--exp-deep);
-  background: var(--exp-secondary);
+  position: relative;
+  font-family: var(--exp-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.3rem, 4vw, 1.6rem);
+  letter-spacing: 0.01em;
+  color: var(--exp-secondary);
+  background: transparent;
   border: none;
-  border-radius: var(--exp-radius);
-  padding: 14px 32px;
+  padding: 14px 24px 22px;
   cursor: pointer;
+}
+
+/* The horizon line — closed by default, opens on reveal. Same gradient
+   treatment as .exp-hero::before, so it reads as the same motif
+   returning, not a new decoration invented for this one moment. */
+.exp-signature-entry-cta::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  height: 1px;
+  width: 0;
+  background: linear-gradient(90deg, transparent, var(--exp-secondary), transparent);
+  transform: translateX(-50%);
+  transition: width 700ms var(--exp-ease);
+}
+
+.exp-signature-entry-cta-open::after {
+  width: 220px;
+}
+
+/* A small, quiet response on hover — the horizon extending slightly as
+   you approach it, not a glow or a color shift. Desktop only in
+   practice, since touch has no hover state; tap works identically
+   either way. */
+.exp-signature-entry-cta:hover::after {
+  width: 260px;
+}
+
+/* The words arrive first; the line opens beneath them roughly 900ms
+   later (see the JS timer in showCta()) — the invitation is spoken,
+   then the way opens. Smaller rise than a filled button would need
+   (18px, not 28px) — the content is lighter now, no box to fill, so
+   the motion is proportionate to what's actually moving. */
+.exp-signature-entry-cta-rise {
+  animation: exp-signature-entry-cta-rise 1000ms var(--exp-ease) both;
+}
+
+@keyframes exp-signature-entry-cta-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .exp-signature-entry-skip {
