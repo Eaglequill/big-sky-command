@@ -33,7 +33,11 @@
   var els = {
     loading: document.getElementById("state-loading"),
     notFound: document.getElementById("state-notfound"),
+    loadFailed: document.getElementById("state-loadfailed"),
     experience: document.getElementById("experience"),
+
+    loadFailedRetry: document.getElementById("state-loadfailed-retry"),
+    loadFailedReturn: document.getElementById("state-loadfailed-return"),
 
     signatureEntry: document.getElementById("exp-signature-entry"),
     signatureEntryText: document.getElementById("exp-signature-entry-text"),
@@ -60,11 +64,38 @@
     thankYou: document.getElementById("exp-thankyou")
   };
 
+  // "loadfailed" is distinct from "notfound": notfound means the request
+  // succeeded and there's genuinely no such experience (or an active
+  // record) — an ordinary, expected result, never treated as a failure.
+  // loadfailed means the request itself didn't complete — a timeout, a
+  // rejected promise, or an unexpected exception. See startExperienceLoad().
   function showState(name) {
     els.loading.hidden = name !== "loading";
     els.notFound.hidden = name !== "notfound";
+    if (els.loadFailed) els.loadFailed.hidden = name !== "loadfailed";
     els.experience.hidden = name !== "experience";
   }
+
+  // Races a promise against a timeout. If the timeout wins, the returned
+  // promise rejects — which propagates up through loadExperience() and is
+  // caught by startExperienceLoad()'s top-level boundary below. Applied
+  // only to the primary experience fetch (see loadExperience) — the QR
+  // scan-resolution path is untouched, per its own existing design.
+  function withTimeout(promise, ms, label) {
+    var timeoutId;
+    var timeoutPromise = new Promise(function (resolve, reject) {
+      timeoutId = window.setTimeout(function () {
+        reject(new Error("Big Sky Command: " + (label || "request") + " timed out after " + ms + "ms."));
+      }, ms);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(function () {
+      window.clearTimeout(timeoutId);
+    });
+  }
+
+  var LOAD_TIMEOUT_MS = 7000;
+
+
 
   // A value counts as "provided" only if it's non-empty and isn't one of
   // our own labeled placeholder strings — so an unfilled placeholder
@@ -184,6 +215,18 @@
   // placeholder, no broken state, the same guarantee the video-based
   // reserved slot this replaces used to make.
   // =====================================================================
+  // Module-level (not per-invocation) so a retry can always find and
+  // cancel a prior attempt's pending scene timers before starting fresh
+  // — see clearSignatureEntryTimers() and startExperienceLoad().
+  var signatureEntryTimers = [];
+  var signatureEntryCtaHandler = null;
+  var signatureEntrySkipHandler = null;
+
+  function clearSignatureEntryTimers() {
+    signatureEntryTimers.forEach(function (t) { window.clearTimeout(t); });
+    signatureEntryTimers = [];
+  }
+
   function initSignatureEntry(record, next) {
     var config = (window.BigSkySignatureEntryAdapter &&
       window.BigSkySignatureEntryAdapter.getConfig(record)) || { enabled: false };
@@ -205,17 +248,16 @@
       return;
     }
 
+    // Defensive cleanup: cancel any timers left over from a prior
+    // invocation (e.g. a retry after a failure that happened after
+    // this function had already started running once).
+    clearSignatureEntryTimers();
+
     var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var scenes = config.scenes.slice().sort(function (a, b) {
       return (a.order || 0) - (b.order || 0);
     });
     var settled = false;
-    var timers = [];
-
-    function clearTimers() {
-      timers.forEach(function (t) { window.clearTimeout(t); });
-      timers = [];
-    }
 
     // Full skip — used by the safety timeout and, in a future version,
     // could be wired to a "skip everything" action. Today only the
@@ -224,13 +266,13 @@
     function finish() {
       if (settled) return;
       settled = true;
-      clearTimers();
+      clearSignatureEntryTimers();
       el.hidden = true;
       next();
     }
 
     function showCta() {
-      clearTimers();
+      clearSignatureEntryTimers();
       textEl.hidden = true;
       if (skipEl) skipEl.hidden = true;
       ctaEl.textContent = (config.cta && config.cta.label) || "Continue";
@@ -255,35 +297,49 @@
       var holdMs = scene.holdMs || 2500; // reading time — unaffected by reduced motion
       var exitMs = reducedMotion ? 0 : (scene.exitMs || 500);
 
-      timers.push(window.setTimeout(function () {
+      signatureEntryTimers.push(window.setTimeout(function () {
         textEl.classList.add("exp-signature-entry-exit");
-        timers.push(window.setTimeout(function () {
+        signatureEntryTimers.push(window.setTimeout(function () {
           playScene(index + 1);
         }, exitMs));
       }, holdMs));
     }
 
-    ctaEl.addEventListener("click", function () {
+    // Deduplication: remove any handler attached by a prior invocation
+    // before attaching a new one, so retry can never stack a second
+    // click listener on top of a first.
+    if (signatureEntryCtaHandler) {
+      ctaEl.removeEventListener("click", signatureEntryCtaHandler);
+    }
+    signatureEntryCtaHandler = function () {
       var action = (config.cta && config.cta.action) || "reveal-experience";
       // Only one action exists in V1. Anything else fails safe by
       // proceeding anyway, rather than leaving the visitor stuck on a
       // button that does nothing.
       finish();
       void action;
-    });
+    };
+    ctaEl.addEventListener("click", signatureEntryCtaHandler);
 
+    if (skipEl && signatureEntrySkipHandler) {
+      skipEl.removeEventListener("click", signatureEntrySkipHandler);
+      signatureEntrySkipHandler = null;
+    }
     if (skipEl && (!config.skip || config.skip.allowSkip !== false)) {
       var skipAfterMs = (config.skip && config.skip.skipAfterMs) || 1500;
-      timers.push(window.setTimeout(function () {
+      signatureEntryTimers.push(window.setTimeout(function () {
         skipEl.hidden = false;
       }, skipAfterMs));
-      skipEl.addEventListener("click", showCta); // stops pacing, jumps to the CTA — never bypasses the tap itself
+      signatureEntrySkipHandler = showCta; // stops pacing, jumps to the CTA — never bypasses the tap itself
+      skipEl.addEventListener("click", signatureEntrySkipHandler);
     }
 
     // Safety net: never let a stalled or misconfigured sequence trap the
     // visitor. Mirrors the original video intro's 8-second timeout,
-    // scaled up since this sequence is intentionally longer.
-    timers.push(window.setTimeout(finish, config.safetyTimeoutMs || 25000));
+    // scaled up since this sequence is intentionally longer. Note this
+    // only protects the scene sequence itself — the primary experience
+    // fetch has its own, much shorter timeout (see LOAD_TIMEOUT_MS).
+    signatureEntryTimers.push(window.setTimeout(finish, config.safetyTimeoutMs || 25000));
 
     el.hidden = false;
     playScene(0);
@@ -539,25 +595,39 @@
   }
 
 
-  async function loadExperience() {
+  async function loadExperience(attempt) {
     var config = window.BIG_SKY_CONFIG || {};
 
     // Primary, original route — checked first, exactly as before.
+    // Timeout-wrapped: a hung request now rejects after LOAD_TIMEOUT_MS
+    // instead of waiting indefinitely — see withTimeout() and
+    // startExperienceLoad() for how that rejection resolves into the
+    // loadfailed state.
     var experienceId = getExperienceIdFromUrl();
     if (experienceId) {
-      var idResult = await window.BigSkyDataProvider.getExperience(experienceId, config);
-      return finishLoad(idResult);
+      var idResult = await withTimeout(
+        window.BigSkyDataProvider.getExperience(experienceId, config),
+        LOAD_TIMEOUT_MS,
+        "getExperience"
+      );
+      return finishLoad(idResult, attempt);
     }
 
     // Additive. Only reached if no /e/{id} or ?e= was present.
     var slug = getExperienceSlugFromUrl();
     if (slug) {
-      var slugResult = await window.BigSkyDataProvider.getExperienceBySlug(slug, config);
-      return finishLoad(slugResult);
+      var slugResult = await withTimeout(
+        window.BigSkyDataProvider.getExperienceBySlug(slug, config),
+        LOAD_TIMEOUT_MS,
+        "getExperienceBySlug"
+      );
+      return finishLoad(slugResult, attempt);
     }
 
     // Additive. Only reached if neither of the above matched. Resolves
-    // and redirects; never renders the template itself.
+    // and redirects; never renders the template itself. Deliberately NOT
+    // timeout-wrapped — this is the QR scan-resolution path, explicitly
+    // out of scope for this reliability fix.
     var scanCode = getScanCodeFromUrl();
     if (scanCode) {
       return resolveAndRedirectScan(scanCode, config);
@@ -566,12 +636,30 @@
     showState("notfound");
   }
 
-  function finishLoad(result) {
+  function finishLoad(result, attempt) {
+    // Stale-result guard: if a newer attempt (a Retry) has started since
+    // this one began, discard this result rather than let a late-arriving
+    // response overwrite whatever the newer attempt has already shown.
+    // Promise.race's own semantics already make this unlikely in
+    // practice (see withTimeout — a losing promise's eventual settlement
+    // is a no-op inside the race itself), but that safety is implicit;
+    // this makes it an explicit guarantee that doesn't depend on
+    // Promise.race internals staying exactly as they are today.
+    if (attempt !== currentLoadAttempt) return;
+
     var data = result.data, error = result.error;
 
+    // IMPORTANT: result.error here is NEVER a "confirmed missing record"
+    // signal for getExperience()/getExperienceBySlug() — verified by
+    // reading both methods directly in data-provider.js. error is
+    // populated only for real problems (Supabase not configured, slug
+    // routing attempted outside Supabase mode, or a genuine Postgrest-
+    // level error from .maybeSingle(), e.g. more than one row matching).
+    // A confirmed zero-row result comes back as { data: null, error:
+    // null } — that's the separate !data branch below, unchanged.
     if (error) {
-      console.error("Big Sky Command: experience lookup failed.", error);
-      showState("notfound");
+      console.error("Big Sky Command: experience lookup returned an error.", error);
+      showState("loadfailed");
       return;
     }
 
@@ -583,13 +671,55 @@
     renderExperience(data);
     loadAndRenderSections(data); // additive, fire-and-forget — see comment above the function itself
     initSignatureEntry(data, function () {
+      if (attempt !== currentLoadAttempt) return; // same stale-result guard, for the async completion callback
       showState("experience");
       initScrollReveal();
     });
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  // =====================================================================
+  // Top-level load boundary. This is the ONE place a failure anywhere in
+  // the load path — a timed-out fetch, a rejected request, or an
+  // unexpected exception during rendering — resolves into a visible
+  // state instead of leaving the "Loading your experience…" spinner
+  // active indefinitely. Called on initial page load and again by the
+  // "Try Again" button; both cases run through the exact same guard and
+  // cleanup logic, so retry can never leave the page in a worse state
+  // than a fresh load would.
+  // =====================================================================
+  var loadInProgress = false;
+  var currentLoadAttempt = 0; // incremented per attempt; see the stale-result guard in finishLoad()
+
+  async function startExperienceLoad() {
+    if (loadInProgress) return; // ignores rapid repeated Retry clicks
+    loadInProgress = true;
+    var attempt = ++currentLoadAttempt;
+    clearSignatureEntryTimers(); // defensive — cancels anything left over from a prior attempt
     showState("loading");
-    loadExperience();
+    try {
+      await loadExperience(attempt);
+    } catch (err) {
+      if (attempt === currentLoadAttempt) {
+        // Technical detail stays here, in the console, for debugging —
+        // never surfaced to the visitor. See #state-loadfailed for what
+        // they actually see.
+        console.error("Big Sky Command: experience failed to load.", err);
+        showState("loadfailed");
+      }
+    } finally {
+      loadInProgress = false;
+    }
+  }
+
+  if (els.loadFailedRetry) {
+    els.loadFailedRetry.addEventListener("click", function () {
+      startExperienceLoad();
+    });
+  }
+  // els.loadFailedReturn is a plain <a href>, not a button — the browser
+  // handles that navigation natively, no listener needed.
+
+  document.addEventListener("DOMContentLoaded", function () {
+    startExperienceLoad();
   });
 })();
