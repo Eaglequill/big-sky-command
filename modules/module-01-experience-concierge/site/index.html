@@ -162,6 +162,52 @@
     </div>
   </div>
 
+  <!-- ACT IV — "THE INVITATION" — reusable component (see
+       initTheInvitation() in app.js). Sibling of the other top-level
+       states, never nested inside <main id="experience">. For an
+       experience with Act IV configured, this REPLACES the old
+       Hero-onward flow as the terminal state — it does not lead into
+       it. For any experience without Act IV configured, the chain
+       falls through to showState("experience") exactly as it always
+       has, completely unchanged. Configuration (tone lines, timing,
+       calendar copy) comes from
+       window.BigSkyTheInvitationAdapter.getConfig(record) — see that
+       file's header. Identity Signature selection is never performed
+       here — see window.BigSkyIdentityEngine.selectExpression() in
+       identity-engine.js. -->
+  <div id="exp-the-invitation" class="exp-signature-entry" hidden>
+    <div class="exp-signature-entry-atmosphere" aria-hidden="true"></div>
+
+    <p id="exp-the-invitation-text" class="exp-signature-entry-text"></p>
+    <p id="exp-the-invitation-promise-reveal" class="exp-the-vision-reveal-promise" hidden></p>
+
+    <div id="exp-the-invitation-cta-block" class="exp-the-invitation-cta-block" hidden>
+      <p id="exp-the-invitation-tone-line" class="exp-the-vision-prompt"></p>
+      <button id="exp-the-invitation-cta" class="exp-signature-entry-cta" type="button"></button>
+      <p id="exp-the-invitation-cta-support" class="exp-the-turn-continue"></p>
+    </div>
+
+    <!-- Curtain reuse — same exp-curtain-lift keyframe already used at
+         the very opening of the experience, applied here on tap rather
+         than automatically on render. No new CSS needed: toggling
+         `hidden` off on an element whose class already carries the
+         animation is enough for it to play from the start, the same
+         way display:none -> block always restarts a CSS animation. -->
+    <div id="exp-the-invitation-curtain" class="exp-curtain" hidden aria-hidden="true"></div>
+    <p id="exp-the-invitation-curtain-marker" class="exp-the-invitation-curtain-marker" hidden></p>
+
+    <div id="exp-the-invitation-panel" class="exp-form-panel exp-the-invitation-panel" hidden>
+      <p id="exp-the-invitation-panel-copy" class="exp-the-vision-prompt"></p>
+      <div id="exp-the-invitation-calendar-embed" class="exp-the-invitation-calendar-embed" hidden></div>
+      <a id="exp-the-invitation-calendar-link" class="exp-signature-entry-cta" hidden target="_blank" rel="noopener"></a>
+      <div id="exp-the-invitation-form-embed" class="exp-form-embed" hidden></div>
+    </div>
+
+    <footer class="exp-footer exp-the-invitation-footer">
+      <p id="exp-the-invitation-footer-text"></p>
+    </footer>
+  </div>
+
   <!-- Experience template: populated entirely from the database record -->
   <main id="experience" class="experience" hidden>
 
@@ -301,6 +347,13 @@
        Configures question wording and timing only — never
        interpretation, which belongs entirely to identity-engine.js. -->
   <script src="the-vision-adapter.js"></script>
+  <!-- TEMPORARY — pending migration into experience_sections. See this
+       file's own header comment. Provides window.BigSkyTheInvitationAdapter
+       for the reusable Act IV ("The Invitation") component in app.js.
+       Configures tone-line content, timing, and calendar copy only —
+       never interpretation, which belongs entirely to
+       identity-engine.js. -->
+  <script src="the-invitation-adapter.js"></script>
   <!-- Experience Engine logic -->
   <script src="app.js"></script>
 

@@ -85,7 +85,24 @@
     return Promise.resolve(result);
   }
 
+  // A narrow, generic boundary: given a signatureId and a map of
+  // possible expressions (keyed by signature id, plus a "default"
+  // fallback), return the right one. This function has no knowledge of
+  // what an "expression" actually is — a tone line, a color, a
+  // follow-up message — that's entirely up to the caller. This exists
+  // so "how a signature gets applied" stays owned by the Identity
+  // Engine, reusable by every future touchpoint, rather than being
+  // reinvented ad hoc inside any one component (e.g. Act IV).
+  function selectExpression(signatureId, expressions) {
+    if (!expressions) return null;
+    if (signatureId && expressions[signatureId] !== undefined) {
+      return expressions[signatureId];
+    }
+    return expressions.default !== undefined ? expressions.default : null;
+  }
+
   window.BigSkyIdentityEngine = {
-    interpretPromise: interpretPromise
+    interpretPromise: interpretPromise,
+    selectExpression: selectExpression
   };
 })();

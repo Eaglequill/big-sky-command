@@ -463,6 +463,41 @@ p { margin: 0; }
   max-width: 36ch;
 }
 
+/* ---------------- Act IV: The Invitation ---------------- */
+/* Deliberately small — the tone line reuses .exp-the-vision-prompt,
+   the CTA reuses .exp-signature-entry-cta (the Threshold treatment),
+   the calendar/form panel reuses .exp-form-panel, the curtain reuses
+   .exp-curtain outright. This is genuinely everything new. */
+
+.exp-the-invitation-cta-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.exp-the-invitation-curtain-marker {
+  position: absolute;
+  z-index: 3;
+  font-family: var(--exp-font-body);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--exp-ink-muted);
+}
+
+.exp-the-invitation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+}
+
+.exp-the-invitation-footer {
+  padding: 12px 0 0;
+}
+
 /* Reusable utility — applies the EXISTING exp-focus-in keyframe
    (defined below, under Hero) to any element, not just the headline.
    The keyframe itself is not duplicated; this is the one new selector

@@ -63,6 +63,22 @@
     theVisionRevealName: document.getElementById("exp-the-vision-reveal-name"),
     theVisionRevealPromise: document.getElementById("exp-the-vision-reveal-promise"),
 
+    theInvitation: document.getElementById("exp-the-invitation"),
+    theInvitationText: document.getElementById("exp-the-invitation-text"),
+    theInvitationPromiseReveal: document.getElementById("exp-the-invitation-promise-reveal"),
+    theInvitationCtaBlock: document.getElementById("exp-the-invitation-cta-block"),
+    theInvitationToneLine: document.getElementById("exp-the-invitation-tone-line"),
+    theInvitationCta: document.getElementById("exp-the-invitation-cta"),
+    theInvitationCtaSupport: document.getElementById("exp-the-invitation-cta-support"),
+    theInvitationCurtain: document.getElementById("exp-the-invitation-curtain"),
+    theInvitationCurtainMarker: document.getElementById("exp-the-invitation-curtain-marker"),
+    theInvitationPanel: document.getElementById("exp-the-invitation-panel"),
+    theInvitationPanelCopy: document.getElementById("exp-the-invitation-panel-copy"),
+    theInvitationCalendarEmbed: document.getElementById("exp-the-invitation-calendar-embed"),
+    theInvitationCalendarLink: document.getElementById("exp-the-invitation-calendar-link"),
+    theInvitationFormEmbed: document.getElementById("exp-the-invitation-form-embed"),
+    theInvitationFooterText: document.getElementById("exp-the-invitation-footer-text"),
+
     headline: document.getElementById("exp-headline"),
     subheadline: document.getElementById("exp-subheadline"),
     eyebrow: document.getElementById("exp-eyebrow"),
@@ -103,6 +119,7 @@
     if (els.signatureEntry) els.signatureEntry.hidden = name !== "signatureentry";
     if (els.theTurn) els.theTurn.hidden = name !== "theturn";
     if (els.theVision) els.theVision.hidden = name !== "thevision";
+    if (els.theInvitation) els.theInvitation.hidden = name !== "theinvitation";
     els.experience.hidden = name !== "experience";
   }
 
@@ -769,6 +786,226 @@
     });
   }
 
+  // =====================================================================
+  // Act IV — "The Invitation". For an experience with Act IV
+  // configured, this REPLACES the old Hero-onward flow entirely — it
+  // becomes the terminal state, not a lead-in to it. For any experience
+  // without Act IV configured, next() fires immediately and the chain
+  // falls through to showState("experience") exactly as it always has —
+  // every other client is completely unaffected.
+  //
+  // CRITICAL BOUNDARY, same discipline as Act III: this component never
+  // performs Identity Signature selection itself. It calls
+  // window.BigSkyIdentityEngine.selectExpression(signatureId, toneLines)
+  // and only ever reads the returned line — never signatureId, never
+  // any classification logic. The tone-line content itself lives in
+  // the-invitation-adapter.js, not here.
+  // =====================================================================
+  var theInvitationTimers = [];
+  var theInvitationActiveCtaHandler = null;
+
+  function clearTheInvitationTimers() {
+    theInvitationTimers.forEach(function (t) { window.clearTimeout(t); });
+    theInvitationTimers = [];
+  }
+
+  function initTheInvitation(record, next) {
+    var config = (window.BigSkyTheInvitationAdapter &&
+      window.BigSkyTheInvitationAdapter.getConfig(record)) || { enabled: false };
+
+    if (!config.enabled) {
+      next();
+      return;
+    }
+
+    var el = els.theInvitation;
+    var textEl = els.theInvitationText;
+    var promiseRevealEl = els.theInvitationPromiseReveal;
+    var ctaBlockEl = els.theInvitationCtaBlock;
+    var toneLineEl = els.theInvitationToneLine;
+    var ctaEl = els.theInvitationCta;
+    var ctaSupportEl = els.theInvitationCtaSupport;
+
+    if (!el || !textEl || !ctaBlockEl || !ctaEl) {
+      next();
+      return;
+    }
+
+    clearTheInvitationTimers();
+    var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Carried forward from Act III — read once, at the start, never
+    // mutated by this component.
+    var businessName = theVisionBusinessName;
+    var promiseText = theVisionPromiseText;
+    var signatureId = theVisionSignatureId;
+    void businessName; // not re-shown in Act IV — only the promise gets a second literal appearance, per docs/14
+
+    function playTextScene(list, index, onDone) {
+      if (index >= list.length) { onDone(); return; }
+      var scene = list[index];
+      textEl.textContent = scene.text || "";
+      textEl.hidden = false;
+      textEl.classList.remove("exp-focus-in-el", "exp-signature-entry-exit");
+      void textEl.offsetWidth;
+      textEl.classList.add("exp-focus-in-el");
+
+      var holdMs = scene.holdMs || 2500; // reading time — never affected by reduced motion
+      var exitMs = reducedMotion ? 0 : (scene.exitMs || 500);
+      theInvitationTimers.push(window.setTimeout(function () {
+        textEl.classList.add("exp-signature-entry-exit");
+        theInvitationTimers.push(window.setTimeout(function () {
+          playTextScene(list, index + 1, onDone);
+        }, exitMs));
+      }, holdMs));
+    }
+
+    function revealPromiseThenTurn() {
+      if (!promiseText) {
+        playTurnScenes();
+        return;
+      }
+      textEl.hidden = true;
+      promiseRevealEl.textContent = promiseText;
+      promiseRevealEl.hidden = false;
+      promiseRevealEl.classList.remove("exp-focus-in-el");
+      void promiseRevealEl.offsetWidth;
+      promiseRevealEl.classList.add("exp-focus-in-el");
+
+      var holdMs = 2200; // the highest-weight moment in the whole journey — full length regardless of reduced motion
+      theInvitationTimers.push(window.setTimeout(function () {
+        promiseRevealEl.hidden = true;
+        playTurnScenes();
+      }, holdMs));
+    }
+
+    function playTurnScenes() {
+      var turnScenes = (promiseText && config.turnScenes) ? config.turnScenes.slice() : [];
+      playTextScene(turnScenes, 0, playClosingLine);
+    }
+
+    function playClosingLine() {
+      var closing = promiseText ? config.closingLine : (config.fallbackNoPromise && config.fallbackNoPromise.closingLine);
+      if (!closing) { showCtaBlock(); return; }
+      playTextScene([closing], 0, showCtaBlock);
+    }
+
+    function showCtaBlock() {
+      textEl.hidden = true;
+
+      // The one call this component makes outside itself for anything
+      // signature-related — a lookup, nothing more. signatureId itself
+      // is never assigned to any element's text content, anywhere.
+      var toneLine = (window.BigSkyIdentityEngine && window.BigSkyIdentityEngine.selectExpression)
+        ? window.BigSkyIdentityEngine.selectExpression(signatureId, config.toneLines)
+        : (config.toneLines && config.toneLines.default) || "";
+
+      toneLineEl.textContent = toneLine || "";
+      ctaEl.textContent = (config.cta && config.cta.label) || "Continue";
+      ctaSupportEl.textContent = (config.cta && config.cta.supportingText) || "";
+
+      ctaBlockEl.hidden = false;
+      ctaBlockEl.classList.remove("exp-focus-in-el");
+      void ctaBlockEl.offsetWidth;
+      ctaBlockEl.classList.add("exp-focus-in-el");
+    }
+
+    function beginCommandLaunch() {
+      ctaBlockEl.hidden = true;
+
+      var curtainEl = els.theInvitationCurtain;
+      var markerEl = els.theInvitationCurtainMarker;
+
+      // Toggling `hidden` off is enough to make the curtain play its
+      // animation from the start — the same mechanism that already
+      // reveals it automatically at the very opening of the experience,
+      // just triggered here by a tap instead of by rendering.
+      if (curtainEl) curtainEl.hidden = false;
+      if (markerEl && config.curtainMarkerText) {
+        markerEl.textContent = config.curtainMarkerText;
+        markerEl.hidden = false;
+      }
+
+      var revealDelay = reducedMotion ? 0 : 700;
+      theInvitationTimers.push(window.setTimeout(function () {
+        renderCommandLaunchPanel();
+        if (markerEl) markerEl.hidden = true;
+        if (curtainEl) curtainEl.hidden = true;
+      }, revealDelay));
+    }
+
+    // Implements the approved runtime truth table: embeddable calendar
+    // -> non-embeddable calendar (styled action) -> lead-capture
+    // fallback (never mislabeled as scheduling) -> graceful empty
+    // state. Reuses isUsable() and injectEmbedHtml(), both already
+    // established elsewhere in this file — nothing new invented for
+    // detecting "is this field actually usable."
+    function renderCommandLaunchPanel() {
+      var panelEl = els.theInvitationPanel;
+      var panelCopyEl = els.theInvitationPanelCopy;
+      var calendarEmbedEl = els.theInvitationCalendarEmbed;
+      var calendarLinkEl = els.theInvitationCalendarLink;
+      var formEmbedEl = els.theInvitationFormEmbed;
+
+      var hasCalendar = isUsable(record.calendar_link);
+      var hasForm = isUsable(record.ghl_form_embed);
+
+      if (hasCalendar && config.calendarEmbeddable) {
+        panelCopyEl.textContent = config.calendarEmbedCopy || "";
+        var iframe = document.createElement("iframe");
+        iframe.src = record.calendar_link;
+        iframe.style.width = "100%";
+        iframe.style.minHeight = "480px";
+        iframe.style.border = "none";
+        calendarEmbedEl.innerHTML = "";
+        calendarEmbedEl.appendChild(iframe);
+        calendarEmbedEl.hidden = false;
+      } else if (hasCalendar && !config.calendarEmbeddable) {
+        panelCopyEl.textContent = config.calendarLinkCopy || "";
+        calendarLinkEl.href = record.calendar_link;
+        calendarLinkEl.textContent = config.calendarLinkButtonLabel || "Open Scheduling";
+        calendarLinkEl.hidden = false;
+      } else if (hasForm) {
+        // Deliberately not called "scheduling" anywhere in this branch
+        // — this is a genuine lead-capture fallback, and the copy must
+        // stay honest about what it actually does.
+        panelCopyEl.textContent = config.formFallbackCopy || "";
+        injectEmbedHtml(formEmbedEl, record.ghl_form_embed);
+        formEmbedEl.hidden = false;
+      } else {
+        panelCopyEl.textContent = config.emptyStateCopy || "";
+      }
+
+      panelEl.hidden = false;
+      panelEl.classList.remove("exp-focus-in-el");
+      void panelEl.offsetWidth;
+      panelEl.classList.add("exp-focus-in-el");
+
+      if (els.theInvitationFooterText) {
+        els.theInvitationFooterText.textContent = config.footerSignature || "";
+      }
+    }
+
+    theInvitationActiveCtaHandler = beginCommandLaunch;
+
+    showState("theinvitation");
+    var openingScenes = (promiseText && config.fullCircleScenes) ? config.fullCircleScenes.slice() : [];
+    if (openingScenes.length) {
+      playTextScene(openingScenes, 0, revealPromiseThenTurn);
+    } else {
+      revealPromiseThenTurn();
+    }
+  }
+
+  // Attached once, ever — same lesson as every other static element in
+  // this file: the CTA button is reused, not recreated, so its listener
+  // is wired through an indirection rather than re-attached per call.
+  if (els.theInvitationCta) {
+    els.theInvitationCta.addEventListener("click", function () {
+      if (theInvitationActiveCtaHandler) theInvitationActiveCtaHandler();
+    });
+  }
+
   function renderExperience(record) {
     document.title = (record.experience_name || "Big Sky Command™ Experience");
 
@@ -1104,8 +1341,15 @@
           theVisionBusinessName = visionResult.businessName;
           theVisionPromiseText = visionResult.promiseText;
           theVisionSignatureId = visionResult.signatureId; // ready for Act IV to read; never rendered anywhere in Act III itself
-          showState("experience");
-          initScrollReveal();
+          initTheInvitation(data, function () {
+            // Only reached when Act IV is NOT configured — the
+            // unchanged fallthrough every other client already gets.
+            // When Act IV IS configured, it becomes the terminal state
+            // itself and this callback is never invoked.
+            if (attempt !== currentLoadAttempt) return;
+            showState("experience");
+            initScrollReveal();
+          });
         });
       });
     });
@@ -1135,6 +1379,7 @@
     clearSignatureEntryTimers(); // defensive — cancels anything left over from a prior attempt
     clearTheTurnTimers(); // same defensive cleanup, for Act II
     clearTheVisionTimers(); // same defensive cleanup, for Act III
+    clearTheInvitationTimers(); // same defensive cleanup, for Act IV
     showState("loading");
     try {
       await loadExperience(attempt);
