@@ -225,9 +225,10 @@ p { margin: 0; }
   align-items: center;
   justify-content: center;
   gap: 32px;
-  padding: 0 28px;
+  padding: 24px 28px;
   background: var(--exp-deep);
   text-align: center;
+  overflow-y: auto; /* the ten-item Manifest can exceed viewport height on smaller screens; harmless no-op for every other act, which never overflows */
 }
 
 .exp-signature-entry-atmosphere {
@@ -496,6 +497,52 @@ p { margin: 0; }
 
 .exp-the-invitation-footer {
   padding: 12px 0 0;
+}
+
+/* THE MANIFEST — deliberately plain. Every item uses the exact same
+   typography and color regardless of its status ("Captured" vs
+   "Awaiting Command Launch(TM)") — no checkmarks, no color-coding, no
+   progress-bar visual language. The honesty lives entirely in the
+   words; giving different statuses different visual weight would
+   start to read as a tracker, which this explicitly is not. */
+.exp-the-invitation-manifest {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: var(--exp-max-width);
+}
+
+.exp-the-invitation-manifest-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--exp-glass-border);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.6s var(--exp-ease), transform 0.6s var(--exp-ease);
+}
+
+.exp-the-invitation-manifest-item.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.exp-the-invitation-manifest-label {
+  font-family: var(--exp-font-body);
+  font-size: 0.95rem;
+  color: var(--exp-ink);
+  text-align: left;
+}
+
+.exp-the-invitation-manifest-status {
+  font-family: var(--exp-font-body);
+  font-size: 0.85rem;
+  color: var(--exp-ink-muted);
+  text-align: right;
+  white-space: nowrap;
 }
 
 /* Reusable utility — applies the EXISTING exp-focus-in keyframe

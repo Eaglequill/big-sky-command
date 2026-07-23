@@ -67,16 +67,18 @@
     theInvitationText: document.getElementById("exp-the-invitation-text"),
     theInvitationPromiseReveal: document.getElementById("exp-the-invitation-promise-reveal"),
     theInvitationCtaBlock: document.getElementById("exp-the-invitation-cta-block"),
-    theInvitationToneLine: document.getElementById("exp-the-invitation-tone-line"),
     theInvitationCta: document.getElementById("exp-the-invitation-cta"),
     theInvitationCtaSupport: document.getElementById("exp-the-invitation-cta-support"),
     theInvitationCurtain: document.getElementById("exp-the-invitation-curtain"),
     theInvitationCurtainMarker: document.getElementById("exp-the-invitation-curtain-marker"),
+    theInvitationManifest: document.getElementById("exp-the-invitation-manifest"),
     theInvitationPanel: document.getElementById("exp-the-invitation-panel"),
+    theInvitationPanelHeading: document.getElementById("exp-the-invitation-panel-heading"),
     theInvitationPanelCopy: document.getElementById("exp-the-invitation-panel-copy"),
     theInvitationCalendarEmbed: document.getElementById("exp-the-invitation-calendar-embed"),
     theInvitationCalendarLink: document.getElementById("exp-the-invitation-calendar-link"),
     theInvitationFormEmbed: document.getElementById("exp-the-invitation-form-embed"),
+    theInvitationContactLink: document.getElementById("exp-the-invitation-contact-link"),
     theInvitationFooterText: document.getElementById("exp-the-invitation-footer-text"),
 
     headline: document.getElementById("exp-headline"),
@@ -822,7 +824,6 @@
     var textEl = els.theInvitationText;
     var promiseRevealEl = els.theInvitationPromiseReveal;
     var ctaBlockEl = els.theInvitationCtaBlock;
-    var toneLineEl = els.theInvitationToneLine;
     var ctaEl = els.theInvitationCta;
     var ctaSupportEl = els.theInvitationCtaSupport;
 
@@ -892,15 +893,9 @@
 
     function showCtaBlock() {
       textEl.hidden = true;
-
-      // The one call this component makes outside itself for anything
-      // signature-related — a lookup, nothing more. signatureId itself
-      // is never assigned to any element's text content, anywhere.
-      var toneLine = (window.BigSkyIdentityEngine && window.BigSkyIdentityEngine.selectExpression)
-        ? window.BigSkyIdentityEngine.selectExpression(signatureId, config.toneLines)
-        : (config.toneLines && config.toneLines.default) || "";
-
-      toneLineEl.textContent = toneLine || "";
+      // No tone line spoken here — see the Manifest sequence below,
+      // where the Identity Engine boundary is exercised differently
+      // (reserved, not called, in this approved version of Act IV).
       ctaEl.textContent = (config.cta && config.cta.label) || "Continue";
       ctaSupportEl.textContent = (config.cta && config.cta.supportingText) || "";
 
@@ -910,6 +905,9 @@
       ctaBlockEl.classList.add("exp-focus-in-el");
     }
 
+    // The deliberate tap — "Let's Build Your Experience" — is the
+    // visitor's conscious decision to cross from the Signature
+    // Experience into seeing Command. Never auto-advanced into.
     function beginCommandLaunch() {
       ctaBlockEl.hidden = true;
 
@@ -928,29 +926,88 @@
 
       var revealDelay = reducedMotion ? 0 : 700;
       theInvitationTimers.push(window.setTimeout(function () {
-        renderCommandLaunchPanel();
         if (markerEl) markerEl.hidden = true;
         if (curtainEl) curtainEl.hidden = true;
+        playManifestIntro();
       }, revealDelay));
+    }
+
+    function playManifestIntro() {
+      var m = config.manifest || {};
+      if (!m.introLine) { revealManifestItems(); return; }
+      playTextScene([{ text: m.introLine, revealMs: 900, holdMs: m.introHoldMs || 2600, exitMs: 500 }], 0, revealManifestItems);
+    }
+
+    // THE MANIFEST — an honest, structured inventory, not a progress
+    // bar. Every item's status is literally true the instant it
+    // appears; nothing here simulates work happening elsewhere. Items
+    // stack one at a time and ALL remain visible — never replaced,
+    // never removed, so the visitor watches a real list grow rather
+    // than a slideshow advance.
+    function revealManifestItems() {
+      textEl.hidden = true;
+      var manifestEl = els.theInvitationManifest;
+      var m = config.manifest || {};
+      var items = m.items || [];
+      if (!manifestEl || !items.length) { playManifestClosing(); return; }
+
+      manifestEl.innerHTML = "";
+      manifestEl.hidden = false;
+      var stagger = reducedMotion ? 0 : (m.itemStaggerMs || 380);
+
+      items.forEach(function (item, i) {
+        var row = document.createElement("div");
+        row.className = "exp-the-invitation-manifest-item";
+        var label = document.createElement("span");
+        label.className = "exp-the-invitation-manifest-label";
+        label.textContent = item.label || "";
+        var status = document.createElement("span");
+        status.className = "exp-the-invitation-manifest-status";
+        status.textContent = item.status || "";
+        row.appendChild(label);
+        row.appendChild(status);
+        manifestEl.appendChild(row);
+
+        theInvitationTimers.push(window.setTimeout(function () {
+          row.classList.add("is-visible");
+        }, i * stagger));
+      });
+
+      var totalStagger = items.length * stagger;
+      var settleHold = reducedMotion ? 0 : 900; // let the full list actually be read before moving on
+      theInvitationTimers.push(window.setTimeout(playManifestClosing, totalStagger + settleHold));
+    }
+
+    function playManifestClosing() {
+      var m = config.manifest || {};
+      if (!m.closingLine) { renderCommandLaunchPanel(); return; }
+      playTextScene([{ text: m.closingLine, revealMs: 900, holdMs: m.closingHoldMs || 2400, exitMs: 500 }], 0, function () {
+        textEl.hidden = true;
+        renderCommandLaunchPanel();
+      });
     }
 
     // Implements the approved runtime truth table: embeddable calendar
     // -> non-embeddable calendar (styled action) -> lead-capture
-    // fallback (never mislabeled as scheduling) -> graceful empty
-    // state. Reuses isUsable() and injectEmbedHtml(), both already
-    // established elsewhere in this file — nothing new invented for
-    // detecting "is this field actually usable."
+    // fallback (never mislabeled as scheduling) -> verified phone
+    // fallback (no placeholder email). Reuses isUsable() and
+    // injectEmbedHtml(), both already established elsewhere in this
+    // file. This is the ONE practical action in the whole sequence —
+    // no second CTA appears between the Manifest and this panel.
     function renderCommandLaunchPanel() {
       var panelEl = els.theInvitationPanel;
+      var headingEl = els.theInvitationPanelHeading;
       var panelCopyEl = els.theInvitationPanelCopy;
       var calendarEmbedEl = els.theInvitationCalendarEmbed;
       var calendarLinkEl = els.theInvitationCalendarLink;
       var formEmbedEl = els.theInvitationFormEmbed;
+      var contactLinkEl = els.theInvitationContactLink;
 
       var hasCalendar = isUsable(record.calendar_link);
       var hasForm = isUsable(record.ghl_form_embed);
 
       if (hasCalendar && config.calendarEmbeddable) {
+        headingEl.textContent = config.calendarEmbedHeading || "";
         panelCopyEl.textContent = config.calendarEmbedCopy || "";
         var iframe = document.createElement("iframe");
         iframe.src = record.calendar_link;
@@ -961,6 +1018,7 @@
         calendarEmbedEl.appendChild(iframe);
         calendarEmbedEl.hidden = false;
       } else if (hasCalendar && !config.calendarEmbeddable) {
+        headingEl.textContent = config.calendarLinkHeading || "";
         panelCopyEl.textContent = config.calendarLinkCopy || "";
         calendarLinkEl.href = record.calendar_link;
         calendarLinkEl.textContent = config.calendarLinkButtonLabel || "Open Scheduling";
@@ -969,11 +1027,18 @@
         // Deliberately not called "scheduling" anywhere in this branch
         // — this is a genuine lead-capture fallback, and the copy must
         // stay honest about what it actually does.
+        headingEl.textContent = config.formFallbackHeading || "";
         panelCopyEl.textContent = config.formFallbackCopy || "";
         injectEmbedHtml(formEmbedEl, record.ghl_form_embed);
         formEmbedEl.hidden = false;
-      } else {
-        panelCopyEl.textContent = config.emptyStateCopy || "";
+      } else if (isUsable(config.contactPhone)) {
+        // Verified, real destination — a phone number, never a
+        // placeholder or invented email.
+        headingEl.textContent = config.contactHeading || "";
+        panelCopyEl.textContent = config.contactCopy || "";
+        contactLinkEl.href = "tel:" + config.contactPhone.replace(/[^0-9+]/g, "");
+        contactLinkEl.textContent = config.contactButtonLabel || ("Call " + config.contactPhone);
+        contactLinkEl.hidden = false;
       }
 
       panelEl.hidden = false;

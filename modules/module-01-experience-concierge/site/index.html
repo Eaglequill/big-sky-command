@@ -182,7 +182,6 @@
     <p id="exp-the-invitation-promise-reveal" class="exp-the-vision-reveal-promise" hidden></p>
 
     <div id="exp-the-invitation-cta-block" class="exp-the-invitation-cta-block" hidden>
-      <p id="exp-the-invitation-tone-line" class="exp-the-vision-prompt"></p>
       <button id="exp-the-invitation-cta" class="exp-signature-entry-cta" type="button"></button>
       <p id="exp-the-invitation-cta-support" class="exp-the-turn-continue"></p>
     </div>
@@ -196,11 +195,19 @@
     <div id="exp-the-invitation-curtain" class="exp-curtain" hidden aria-hidden="true"></div>
     <p id="exp-the-invitation-curtain-marker" class="exp-the-invitation-curtain-marker" hidden></p>
 
+    <!-- THE MANIFEST — an honest, structured inventory, built
+         dynamically (see initTheInvitation() in app.js), not a
+         progress bar. Items stack, one at a time, and all stay
+         visible — never replaced, never implying background work. -->
+    <div id="exp-the-invitation-manifest" class="exp-the-invitation-manifest" hidden></div>
+
     <div id="exp-the-invitation-panel" class="exp-form-panel exp-the-invitation-panel" hidden>
-      <p id="exp-the-invitation-panel-copy" class="exp-the-vision-prompt"></p>
+      <p id="exp-the-invitation-panel-heading" class="exp-the-vision-prompt"></p>
+      <p id="exp-the-invitation-panel-copy" class="exp-the-turn-continue"></p>
       <div id="exp-the-invitation-calendar-embed" class="exp-the-invitation-calendar-embed" hidden></div>
       <a id="exp-the-invitation-calendar-link" class="exp-signature-entry-cta" hidden target="_blank" rel="noopener"></a>
       <div id="exp-the-invitation-form-embed" class="exp-form-embed" hidden></div>
+      <a id="exp-the-invitation-contact-link" class="exp-signature-entry-cta" hidden></a>
     </div>
 
     <footer class="exp-footer exp-the-invitation-footer">
