@@ -665,7 +665,7 @@
       void revealNameEl.offsetWidth;
       revealNameEl.classList.add("exp-focus-in-el");
       revealEl.hidden = false;
-      var holdMs = reducedMotion ? 0 : 1400;
+      var holdMs = 1400; // reading time — unaffected by reduced motion, same principle as every scene hold in this file
       theVisionTimers.push(window.setTimeout(showPromiseStep, holdMs));
     }
 
@@ -721,7 +721,7 @@
       void revealPromiseEl.offsetWidth;
       revealPromiseEl.classList.add("exp-focus-in-el");
       revealEl.hidden = false;
-      var holdMs = reducedMotion ? 0 : 1800;
+      var holdMs = 1800; // reading time — unaffected by reduced motion, same fix as the name reveal above
       theVisionTimers.push(window.setTimeout(function () { finish(signatureId); }, holdMs));
     }
 
